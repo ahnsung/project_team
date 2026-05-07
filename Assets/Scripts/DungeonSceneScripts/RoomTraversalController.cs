@@ -5,18 +5,10 @@ public class RoomTraversalController : MonoBehaviour
 {
     private enum State
     {
-        ChoosingPath,   // 시작 후 좌/우 선택 이동
+        Exploring,      // 방 안에서 자유롭게 A/D 이동 가능
         EventRunning,   // 이벤트 진행 중
-        MovingToExit,   // 이벤트 후 같은 방향 출구로 이동
-        Waiting,        // 출구 도착 후 방향 선택 대기
-        Transition      // 다음 방 이동 중
-    }
-
-    private enum PathSide
-    {
-        None,
-        Left,
-        Right
+        Waiting,        // 출구 도착 후 방향 선택 UI 대기
+        Transition      // 방 이동 중
     }
 
     [Header("Movement")]
@@ -28,21 +20,28 @@ public class RoomTraversalController : MonoBehaviour
 
     [Header("Points")]
     [SerializeField] private Transform startPoint;
-    [SerializeField] private Transform eventPointLeft;
-    [SerializeField] private Transform eventPointRight;
-    [SerializeField] private Transform exitPointLeft;
-    [SerializeField] private Transform exitPointRight;
+
+    [Header("Event Points")]
+    [SerializeField] private Transform leftEventPoint;
+    [SerializeField] private Transform rightEventPoint;
+
+    [Header("Exit Points")]
+    [SerializeField] private Transform leftExitPoint;
+    [SerializeField] private Transform rightExitPoint;
 
     [Header("Managers")]
     [SerializeField] private DungeonManager dungeonManager;
     [SerializeField] private DungeonUIManager uiManager;
     [SerializeField] private FadeController fadeController;
 
-    [Header("Event")]
+    [Header("Battle")]
+    [SerializeField] private BattleManager battleManager;
+    [SerializeField] private float monsterBattleChance = 50f;
+
+    [Header("Dummy Event")]
     [SerializeField] private float eventDuration = 1f;
 
     private State state;
-    private PathSide currentPath = PathSide.None;
 
     private bool eventDone;
     private bool exitDone;
@@ -50,43 +49,42 @@ public class RoomTraversalController : MonoBehaviour
 
     private void Start()
     {
-        StartFlow();
+        StartRoom();
     }
 
     private void Update()
     {
-        if (state == State.ChoosingPath || state == State.MovingToExit)
-            Move();
+        if (state != State.Exploring)
+            return;
 
-        if (state == State.ChoosingPath)
-            CheckEvent();
-
-        if (state == State.MovingToExit)
-            CheckExit();
+        Move();
+        CheckEvent();
+        CheckExit();
     }
 
-    private void StartFlow()
+    private void StartRoom()
     {
-        if (startPoint != null)
-            transform.position = startPoint.position;
+        transform.position = startPoint.position;
 
         eventDone = false;
         exitDone = false;
         isTransitioning = false;
-        currentPath = PathSide.None;
 
         if (uiManager != null)
             uiManager.HideDirectionPanel();
 
-        state = State.ChoosingPath;
+        state = State.Exploring;
     }
 
     private void Move()
     {
         float h = 0f;
 
-        if (Input.GetKey(KeyCode.A)) h = -1f;
-        if (Input.GetKey(KeyCode.D)) h = 1f;
+        if (Input.GetKey(KeyCode.A))
+            h = -1f;
+
+        if (Input.GetKey(KeyCode.D))
+            h = 1f;
 
         Vector3 pos = transform.position;
         pos.x += h * moveSpeed * Time.deltaTime;
@@ -97,72 +95,80 @@ public class RoomTraversalController : MonoBehaviour
 
     private void CheckEvent()
     {
-        if (eventDone) return;
+        if (eventDone)
+            return;
 
-        if (eventPointLeft != null && Vector3.Distance(transform.position, eventPointLeft.position) < 0.2f)
+        bool touchedLeftEvent =
+            leftEventPoint != null &&
+            Vector3.Distance(transform.position, leftEventPoint.position) < 0.25f;
+
+        bool touchedRightEvent =
+            rightEventPoint != null &&
+            Vector3.Distance(transform.position, rightEventPoint.position) < 0.25f;
+
+        if (touchedLeftEvent || touchedRightEvent)
         {
             eventDone = true;
-            currentPath = PathSide.Left;
             StartCoroutine(EventRoutine());
-            return;
         }
-
-        if (eventPointRight != null && Vector3.Distance(transform.position, eventPointRight.position) < 0.2f)
-        {
-            eventDone = true;
-            currentPath = PathSide.Right;
-            StartCoroutine(EventRoutine());
-            return;
-        }
-    }
-
-    private void CheckExit()
-    {
-        if (exitDone) return;
-
-        if (currentPath == PathSide.Left)
-        {
-            if (exitPointLeft != null && Vector3.Distance(transform.position, exitPointLeft.position) < 0.2f)
-            {
-                ReachExit();
-            }
-        }
-        else if (currentPath == PathSide.Right)
-        {
-            if (exitPointRight != null && Vector3.Distance(transform.position, exitPointRight.position) < 0.2f)
-            {
-                ReachExit();
-            }
-        }
-    }
-
-    private void ReachExit()
-    {
-        exitDone = true;
-        state = State.Waiting;
-
-        if (dungeonManager != null)
-            dungeonManager.RefreshAll();
-
-        if (uiManager != null)
-            uiManager.ShowDirectionPanel();
     }
 
     private IEnumerator EventRoutine()
     {
         state = State.EventRunning;
 
-        Debug.Log("이벤트 발생: " + currentPath);
+        bool monsterEvent = Random.Range(0f, 100f) < monsterBattleChance;
 
-        yield return new WaitForSeconds(eventDuration);
+        if (monsterEvent && battleManager != null)
+        {
+            battleManager.StartBattle();
 
-        state = State.MovingToExit;
+            while (battleManager.IsBattleRunning())
+            {
+                yield return null;
+            }
+        }
+        else
+        {
+            yield return new WaitForSeconds(eventDuration);
+        }
+
+        state = State.Exploring;
+    }
+
+    private void CheckExit()
+    {
+        if (exitDone)
+            return;
+
+        bool touchedLeftExit =
+            leftExitPoint != null &&
+            Vector3.Distance(transform.position, leftExitPoint.position) < 0.25f;
+
+        bool touchedRightExit =
+            rightExitPoint != null &&
+            Vector3.Distance(transform.position, rightExitPoint.position) < 0.25f;
+
+        if (touchedLeftExit || touchedRightExit)
+        {
+            exitDone = true;
+            state = State.Waiting;
+
+            if (dungeonManager != null)
+                dungeonManager.RefreshAll();
+
+            if (uiManager != null)
+                uiManager.ShowDirectionPanel();
+        }
     }
 
     public void SelectNextRoom(MoveDirection dir)
     {
-        if (state != State.Waiting) return;
-        if (isTransitioning) return;
+        if (state != State.Waiting)
+            return;
+
+        if (isTransitioning)
+            return;
 
         StartCoroutine(ChangeRoom(dir));
     }
@@ -181,17 +187,15 @@ public class RoomTraversalController : MonoBehaviour
         if (dungeonManager != null)
             dungeonManager.MoveToNextRoom(dir);
 
-        if (startPoint != null)
-            transform.position = startPoint.position;
+        transform.position = startPoint.position;
 
         eventDone = false;
         exitDone = false;
-        currentPath = PathSide.None;
 
         if (fadeController != null)
             yield return fadeController.FadeIn();
 
-        state = State.ChoosingPath;
+        state = State.Exploring;
         isTransitioning = false;
     }
 }

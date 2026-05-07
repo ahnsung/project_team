@@ -3411,13 +3411,15 @@ MonoBehaviour:
   minX: 0
   maxX: 100
   startPoint: {fileID: 2124215747}
-  eventPointLeft: {fileID: 55938091}
-  eventPointRight: {fileID: 846517666}
-  exitPointLeft: {fileID: 1706897253}
-  exitPointRight: {fileID: 2129873473}
+  leftEventPoint: {fileID: 55938091}
+  rightEventPoint: {fileID: 846517666}
+  leftExitPoint: {fileID: 2129873473}
+  rightExitPoint: {fileID: 1706897253}
   dungeonManager: {fileID: 268140400}
   uiManager: {fileID: 117336928}
   fadeController: {fileID: 2125530133}
+  battleManager: {fileID: 0}
+  monsterBattleChance: 0
   eventDuration: 1
 --- !u!1 &1861808935
 GameObject:
