@@ -1,24 +1,29 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 
-public class BattleEnemyClick : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public class BattleEnemyClick : MonoBehaviour
 {
     public BattleUnit enemyUnit;
     public BattleManager battleManager;
 
-    public void OnPointerEnter(PointerEventData eventData)
+    private void Awake()
+    {
+        if (enemyUnit == null)
+            enemyUnit = GetComponent<BattleUnit>();
+    }
+
+    private void OnMouseEnter()
     {
         if (battleManager != null)
             battleManager.HoverEnemy(enemyUnit);
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+    private void OnMouseExit()
     {
         if (battleManager != null)
             battleManager.ExitHoverEnemy(enemyUnit);
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    private void OnMouseDown()
     {
         if (battleManager != null)
             battleManager.ClickEnemy(enemyUnit);

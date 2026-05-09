@@ -17,11 +17,17 @@ public class BattleManager : MonoBehaviour
     [Header("Player")]
     public BattleUnit playerUnit;
 
-    [Header("Enemies")]
-    public List<BattleUnit> enemies = new List<BattleUnit>();
+    [Header("Monster Spawn")]
+    public BattleMonsterData[] monsterPool;
+    public Transform enemyGroup;
+    public Transform[] enemySpawnPoints;
+    public int minEnemyCount = 1;
+    public int maxEnemyCount = 3;
 
     [Header("UI")]
     public BattleUIManager uiManager;
+    public GameObject encounterPanel;
+    public TextMeshProUGUI encounterText;
 
     [Header("Floating Text")]
     public TextMeshProUGUI floatingTextPrefab;
@@ -29,33 +35,53 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Setting")]
     public int battleTurn = 1;
+    public float encounterMessageTime = 1f;
     public float actionDelay = 0.6f;
     public int runSuccessPercent = 50;
-
-    [Header("Objects To Hide During Battle")]
-    public GameObject directionPanel;
-    public GameObject inventoryPanel;
 
     private BattleState state = BattleState.None;
     private bool battleRunning = false;
 
-    public System.Action OnBattleFinished;
+    private List<BattleUnit> enemies = new List<BattleUnit>();
+
+    public bool IsBattleRunning()
+    {
+        return battleRunning;
+    }
 
     private void Start()
     {
         if (uiManager != null)
             uiManager.HideBattleUI();
 
-        foreach (var enemy in enemies)
-        {
-            if (enemy != null)
-                enemy.gameObject.SetActive(false);
-        }
+        if (encounterPanel != null)
+            encounterPanel.SetActive(false);
+
+        if (enemyGroup != null)
+            enemyGroup.gameObject.SetActive(false);
     }
 
-    public void StartBattle()
+    public IEnumerator StartBattleEncounter()
     {
         battleRunning = true;
+
+        if (encounterPanel != null)
+            encounterPanel.SetActive(true);
+
+        if (encounterText != null)
+            encounterText.text = "Battle Encounter!";
+
+        yield return new WaitForSeconds(encounterMessageTime);
+
+        if (encounterPanel != null)
+            encounterPanel.SetActive(false);
+
+        SpawnEnemies();
+        StartBattle();
+    }
+
+    private void StartBattle()
+    {
         battleTurn = 1;
         state = BattleState.PlayerTurn;
 
@@ -63,31 +89,73 @@ public class BattleManager : MonoBehaviour
         {
             uiManager.ShowBattleUI();
             uiManager.SetTurnText(battleTurn);
-            uiManager.SetMessage("Battle Start!");
-        }
-
-        if (directionPanel != null)
-            directionPanel.SetActive(false);
-
-        if (inventoryPanel != null)
-            inventoryPanel.SetActive(false);
-
-        foreach (var enemy in enemies)
-        {
-            if (enemy != null)
-            {
-                enemy.gameObject.SetActive(true);
-                enemy.currentHP = enemy.maxHP;
-                enemy.RefreshHPUI();
-                enemy.SetArrow(false);
-                enemy.ResetColor();
-            }
+            uiManager.SetMessage("Player Turn.");
+            uiManager.ShowMainBattleMenu();
         }
     }
 
-    public bool IsBattleRunning()
+    private void SpawnEnemies()
     {
-        return battleRunning;
+        ClearEnemies();
+
+        if (enemyGroup != null)
+            enemyGroup.gameObject.SetActive(true);
+
+        if (monsterPool == null || monsterPool.Length == 0)
+        {
+            Debug.LogError("Monster Pool이 비어 있음. BattleManager에 MonsterData를 넣어야 함.");
+            return;
+        }
+
+        if (enemySpawnPoints == null || enemySpawnPoints.Length == 0)
+        {
+            Debug.LogError("Enemy Spawn Points가 비어 있음.");
+            return;
+        }
+
+        int count = Random.Range(minEnemyCount, maxEnemyCount + 1);
+        count = Mathf.Clamp(count, 1, enemySpawnPoints.Length);
+
+        for (int i = 0; i < count; i++)
+        {
+            BattleMonsterData data = monsterPool[Random.Range(0, monsterPool.Length)];
+
+            if (data == null || data.monsterPrefab == null)
+                continue;
+
+            GameObject enemyObj = Instantiate(data.monsterPrefab, enemySpawnPoints[i].position, Quaternion.identity, enemyGroup);
+
+            BattleUnit unit = enemyObj.GetComponent<BattleUnit>();
+            if (unit == null)
+                unit = enemyObj.AddComponent<BattleUnit>();
+
+            unit.Setup(data.monsterName, data.maxHP, data.attackPower, data.accuracy, data.evasion);
+
+            BattleEnemyClick click = enemyObj.GetComponent<BattleEnemyClick>();
+            if (click == null)
+                click = enemyObj.AddComponent<BattleEnemyClick>();
+
+            click.enemyUnit = unit;
+            click.battleManager = this;
+
+            if (enemyObj.GetComponent<Collider2D>() == null)
+                enemyObj.AddComponent<BoxCollider2D>();
+
+            enemies.Add(unit);
+        }
+    }
+
+    private void ClearEnemies()
+    {
+        enemies.Clear();
+
+        if (enemyGroup == null)
+            return;
+
+        for (int i = enemyGroup.childCount - 1; i >= 0; i--)
+        {
+            Destroy(enemyGroup.GetChild(i).gameObject);
+        }
     }
 
     public void OnClickBattleButton()
@@ -119,6 +187,7 @@ public class BattleManager : MonoBehaviour
     public void ExitHoverEnemy(BattleUnit enemy)
     {
         if (enemy == null) return;
+
         enemy.SetArrow(false);
     }
 
@@ -136,12 +205,15 @@ public class BattleManager : MonoBehaviour
 
         ClearEnemyArrows();
 
+        playerUnit.PlayAttackAnimation();
+
+        yield return new WaitForSeconds(0.25f);
+
         bool hit = RollHit(playerUnit.accuracy, target.evasion);
 
         if (hit)
         {
             target.TakeDamage(playerUnit.attackPower);
-            target.SetHitColor();
             ShowFloatingText(target.transform.position, playerUnit.attackPower.ToString());
 
             if (uiManager != null)
@@ -157,8 +229,6 @@ public class BattleManager : MonoBehaviour
 
         yield return new WaitForSeconds(actionDelay);
 
-        target.ResetColor();
-
         if (AllEnemiesDead())
         {
             EndBattle("Win!");
@@ -172,19 +242,20 @@ public class BattleManager : MonoBehaviour
     {
         state = BattleState.EnemyTurn;
 
-        foreach (var enemy in enemies)
+        foreach (BattleUnit enemy in enemies)
         {
             if (enemy == null || enemy.IsDead)
                 continue;
 
-            yield return new WaitForSeconds(actionDelay);
+            enemy.PlayAttackAnimation();
+
+            yield return new WaitForSeconds(0.25f);
 
             bool hit = RollHit(enemy.accuracy, playerUnit.evasion);
 
             if (hit)
             {
                 playerUnit.TakeDamage(enemy.attackPower);
-                playerUnit.SetHitColor();
                 ShowFloatingText(playerUnit.transform.position, enemy.attackPower.ToString());
 
                 if (uiManager != null)
@@ -199,8 +270,6 @@ public class BattleManager : MonoBehaviour
             }
 
             yield return new WaitForSeconds(actionDelay);
-
-            playerUnit.ResetColor();
 
             if (playerUnit.IsDead)
             {
@@ -256,16 +325,16 @@ public class BattleManager : MonoBehaviour
 
     private bool RollHit(int attackerAccuracy, int targetEvasion)
     {
-        int finalHitChance = attackerAccuracy - targetEvasion;
-        finalHitChance = Mathf.Clamp(finalHitChance, 10, 95);
+        int chance = attackerAccuracy - targetEvasion;
+        chance = Mathf.Clamp(chance, 10, 95);
 
         int roll = Random.Range(0, 100);
-        return roll < finalHitChance;
+        return roll < chance;
     }
 
     private bool AllEnemiesDead()
     {
-        foreach (var enemy in enemies)
+        foreach (BattleUnit enemy in enemies)
         {
             if (enemy != null && !enemy.IsDead)
                 return false;
@@ -276,7 +345,6 @@ public class BattleManager : MonoBehaviour
 
     private void EndBattle(string message)
     {
-        battleRunning = false;
         state = BattleState.BattleEnd;
 
         ClearEnemyArrows();
@@ -291,23 +359,21 @@ public class BattleManager : MonoBehaviour
     {
         yield return new WaitForSeconds(1f);
 
-        foreach (var enemy in enemies)
-        {
-            if (enemy != null)
-                enemy.gameObject.SetActive(false);
-        }
+        ClearEnemies();
+
+        if (enemyGroup != null)
+            enemyGroup.gameObject.SetActive(false);
 
         if (uiManager != null)
             uiManager.HideBattleUI();
 
         state = BattleState.None;
-
-        OnBattleFinished?.Invoke();
+        battleRunning = false;
     }
 
     private void ClearEnemyArrows()
     {
-        foreach (var enemy in enemies)
+        foreach (BattleUnit enemy in enemies)
         {
             if (enemy != null)
                 enemy.SetArrow(false);

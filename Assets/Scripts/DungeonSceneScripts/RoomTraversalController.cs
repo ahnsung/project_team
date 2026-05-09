@@ -121,12 +121,7 @@ public class RoomTraversalController : MonoBehaviour
 
         if (monsterEvent && battleManager != null)
         {
-            battleManager.StartBattle();
-
-            while (battleManager.IsBattleRunning())
-            {
-                yield return null;
-            }
+            yield return StartCoroutine(battleManager.StartBattleEncounter());
         }
         else
         {

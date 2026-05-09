@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 public class BattleUnit : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class BattleUnit : MonoBehaviour
 
     [Header("Visual")]
     public SpriteRenderer spriteRenderer;
+    public Animator animator;
 
     public bool IsDead => currentHP <= 0;
 
@@ -26,18 +28,35 @@ public class BattleUnit : MonoBehaviour
 
     private void Awake()
     {
-        currentHP = maxHP;
-
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (animator == null)
+            animator = GetComponent<Animator>();
 
         if (spriteRenderer != null)
             originalColor = spriteRenderer.color;
 
+        currentHP = maxHP;
+        RefreshHPUI();
+
         if (targetArrow != null)
             targetArrow.SetActive(false);
+    }
+
+    public void Setup(string newName, int hp, int atk, int acc, int eva)
+    {
+        unitName = newName;
+        maxHP = hp;
+        currentHP = hp;
+        attackPower = atk;
+        accuracy = acc;
+        evasion = eva;
 
         RefreshHPUI();
+
+        if (targetArrow != null)
+            targetArrow.SetActive(false);
     }
 
     public void TakeDamage(int damage)
@@ -45,6 +64,11 @@ public class BattleUnit : MonoBehaviour
         currentHP -= damage;
         currentHP = Mathf.Clamp(currentHP, 0, maxHP);
         RefreshHPUI();
+
+        PlayHitAnimation();
+
+        if (IsDead)
+            PlayDeathAnimation();
     }
 
     public void RefreshHPUI()
@@ -53,7 +77,7 @@ public class BattleUnit : MonoBehaviour
             hpBarFill.fillAmount = (float)currentHP / maxHP;
 
         if (hpText != null)
-            hpText.text = currentHP.ToString();
+            hpText.text = currentHP + " / " + maxHP;
     }
 
     public void SetArrow(bool active)
@@ -62,15 +86,33 @@ public class BattleUnit : MonoBehaviour
             targetArrow.SetActive(active);
     }
 
-    public void SetHitColor()
+    public void PlayAttackAnimation()
     {
-        if (spriteRenderer != null)
-            spriteRenderer.color = Color.red;
+        if (animator != null)
+            animator.SetTrigger("Attack");
     }
 
-    public void ResetColor()
+    public void PlayHitAnimation()
     {
-        if (spriteRenderer != null)
-            spriteRenderer.color = originalColor;
+        if (animator != null)
+            animator.SetTrigger("Hit");
+
+        StartCoroutine(HitColorRoutine());
+    }
+
+    public void PlayDeathAnimation()
+    {
+        if (animator != null)
+            animator.SetTrigger("Die");
+    }
+
+    private IEnumerator HitColorRoutine()
+    {
+        if (spriteRenderer == null)
+            yield break;
+
+        spriteRenderer.color = Color.red;
+        yield return new WaitForSeconds(0.15f);
+        spriteRenderer.color = originalColor;
     }
 }
