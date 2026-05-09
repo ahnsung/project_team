@@ -1,16 +1,12 @@
 using UnityEngine;
-using TMPro;
 
 public class BattleUIManager : MonoBehaviour
 {
     [Header("Panels")]
     public GameObject battleRoot;
+
     public GameObject battleMenuPanel;
     public GameObject actionMenuPanel;
-
-    [Header("Texts")]
-    public TextMeshProUGUI turnText;
-    public TextMeshProUGUI messageText;
 
     public void ShowBattleUI()
     {
@@ -42,17 +38,5 @@ public class BattleUIManager : MonoBehaviour
 
         if (actionMenuPanel != null)
             actionMenuPanel.SetActive(true);
-    }
-
-    public void SetTurnText(int turn)
-    {
-        if (turnText != null)
-            turnText.text = "Current Turn : " + turn;
-    }
-
-    public void SetMessage(string message)
-    {
-        if (messageText != null)
-            messageText.text = message;
     }
 }

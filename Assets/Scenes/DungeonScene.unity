@@ -1884,8 +1884,6 @@ MonoBehaviour:
   battleRoot: {fileID: 0}
   battleMenuPanel: {fileID: 0}
   actionMenuPanel: {fileID: 0}
-  turnText: {fileID: 0}
-  messageText: {fileID: 0}
 --- !u!1 &590087849
 GameObject:
   m_ObjectHideFlags: 0
@@ -2678,7 +2676,7 @@ GameObject:
   - component: {fileID: 972576503}
   - component: {fileID: 972576502}
   m_Layer: 5
-  m_Name: BattleButton
+  m_Name: AttackButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2747,7 +2745,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 972576503}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1052808771}
+        m_TargetAssemblyTypeName: BattleManager, Assembly-CSharp
+        m_MethodName: OnClickAttackButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &972576503
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3249,10 +3259,10 @@ MonoBehaviour:
   minEnemyCount: 1
   maxEnemyCount: 3
   uiManager: {fileID: 565677479}
-  encounterPanel: {fileID: 0}
-  encounterText: {fileID: 0}
+  encounterPanel: {fileID: 848664022}
+  encounterText: {fileID: 2067035176}
   floatingTextPrefab: {fileID: 0}
-  worldCanvas: {fileID: 0}
+  worldCanvas: {fileID: 1096765755}
   battleTurn: 1
   encounterMessageTime: 1
   actionDelay: 0.6
@@ -3655,7 +3665,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1134449843}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1052808771}
+        m_TargetAssemblyTypeName: BattleManager, Assembly-CSharp
+        m_MethodName: OnClickRunButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1134449843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4150,13 +4172,14 @@ GameObject:
   - component: {fileID: 1292522162}
   - component: {fileID: 1292522164}
   - component: {fileID: 1292522163}
+  - component: {fileID: 1292522165}
   m_Layer: 5
   m_Name: BattleRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1292522162
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4217,6 +4240,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1292522161}
   m_CullTransparentMesh: 1
+--- !u!114 &1292522165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1292522161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0d274aeb3acf30498d0a50690d73220, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  battleRoot: {fileID: 1292522161}
+  battleMenuPanel: {fileID: 638705090}
+  actionMenuPanel: {fileID: 218388342}
 --- !u!1 &1302871163
 GameObject:
   m_ObjectHideFlags: 0
@@ -4760,7 +4798,7 @@ GameObject:
   - component: {fileID: 1746621861}
   - component: {fileID: 1746621860}
   m_Layer: 5
-  m_Name: BattleButton
+  m_Name: BattleStartButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4829,7 +4867,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1746621861}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1052808771}
+        m_TargetAssemblyTypeName: BattleManager, Assembly-CSharp
+        m_MethodName: OnClickBattleButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1746621861
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5140,7 +5190,7 @@ MonoBehaviour:
   uiManager: {fileID: 117336928}
   fadeController: {fileID: 2125530133}
   battleManager: {fileID: 0}
-  monsterBattleChance: 0
+  monsterBattleChance: 100
   eventDuration: 1
 --- !u!114 &1836735080
 MonoBehaviour:
@@ -5156,10 +5206,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Player
   maxHP: 200
-  currentHP: 20
+  currentHP: 200
   attackPower: 10
-  accuracy: 70
-  evasion: 30
+  accuracy: 80
+  evasion: 20
   hpBarFill: {fileID: 0}
   hpText: {fileID: 0}
   targetArrow: {fileID: 0}

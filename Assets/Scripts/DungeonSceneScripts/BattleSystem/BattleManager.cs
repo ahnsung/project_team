@@ -21,11 +21,13 @@ public class BattleManager : MonoBehaviour
     public BattleMonsterData[] monsterPool;
     public Transform enemyGroup;
     public Transform[] enemySpawnPoints;
+
     public int minEnemyCount = 1;
-    public int maxEnemyCount = 3;
+    public int maxEnemyCount = 1;
 
     [Header("UI")]
     public BattleUIManager uiManager;
+
     public GameObject encounterPanel;
     public TextMeshProUGUI encounterText;
 
@@ -35,11 +37,14 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Setting")]
     public int battleTurn = 1;
+
     public float encounterMessageTime = 1f;
     public float actionDelay = 0.6f;
+
     public int runSuccessPercent = 50;
 
     private BattleState state = BattleState.None;
+
     private bool battleRunning = false;
 
     private List<BattleUnit> enemies = new List<BattleUnit>();
@@ -69,7 +74,7 @@ public class BattleManager : MonoBehaviour
             encounterPanel.SetActive(true);
 
         if (encounterText != null)
-            encounterText.text = "Battle Encounter!";
+            encounterText.text = "전투 발생!";
 
         yield return new WaitForSeconds(encounterMessageTime);
 
@@ -77,19 +82,19 @@ public class BattleManager : MonoBehaviour
             encounterPanel.SetActive(false);
 
         SpawnEnemies();
+
         StartBattle();
     }
 
     private void StartBattle()
     {
         battleTurn = 1;
+
         state = BattleState.PlayerTurn;
 
         if (uiManager != null)
         {
             uiManager.ShowBattleUI();
-            uiManager.SetTurnText(battleTurn);
-            uiManager.SetMessage("Player Turn.");
             uiManager.ShowMainBattleMenu();
         }
     }
@@ -103,13 +108,13 @@ public class BattleManager : MonoBehaviour
 
         if (monsterPool == null || monsterPool.Length == 0)
         {
-            Debug.LogError("Monster Pool이 비어 있음. BattleManager에 MonsterData를 넣어야 함.");
+            Debug.LogError("Monster Pool 비어있음");
             return;
         }
 
         if (enemySpawnPoints == null || enemySpawnPoints.Length == 0)
         {
-            Debug.LogError("Enemy Spawn Points가 비어 있음.");
+            Debug.LogError("Enemy Spawn Points 비어있음");
             return;
         }
 
@@ -118,20 +123,36 @@ public class BattleManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            BattleMonsterData data = monsterPool[Random.Range(0, monsterPool.Length)];
+            BattleMonsterData data =
+                monsterPool[Random.Range(0, monsterPool.Length)];
 
             if (data == null || data.monsterPrefab == null)
                 continue;
 
-            GameObject enemyObj = Instantiate(data.monsterPrefab, enemySpawnPoints[i].position, Quaternion.identity, enemyGroup);
+            GameObject enemyObj =
+                Instantiate(
+                    data.monsterPrefab,
+                    enemySpawnPoints[i].position,
+                    Quaternion.identity,
+                    enemyGroup
+                );
 
             BattleUnit unit = enemyObj.GetComponent<BattleUnit>();
+
             if (unit == null)
                 unit = enemyObj.AddComponent<BattleUnit>();
 
-            unit.Setup(data.monsterName, data.maxHP, data.attackPower, data.accuracy, data.evasion);
+            unit.Setup(
+                data.monsterName,
+                data.maxHP,
+                data.attackPower,
+                data.accuracy,
+                data.evasion
+            );
 
-            BattleEnemyClick click = enemyObj.GetComponent<BattleEnemyClick>();
+            BattleEnemyClick click =
+                enemyObj.GetComponent<BattleEnemyClick>();
+
             if (click == null)
                 click = enemyObj.AddComponent<BattleEnemyClick>();
 
@@ -160,7 +181,8 @@ public class BattleManager : MonoBehaviour
 
     public void OnClickBattleButton()
     {
-        if (state != BattleState.PlayerTurn) return;
+        if (state != BattleState.PlayerTurn)
+            return;
 
         if (uiManager != null)
             uiManager.ShowActionMenu();
@@ -168,33 +190,38 @@ public class BattleManager : MonoBehaviour
 
     public void OnClickAttackButton()
     {
-        if (state != BattleState.PlayerTurn) return;
+        if (state != BattleState.PlayerTurn)
+            return;
 
         state = BattleState.SelectingTarget;
-
-        if (uiManager != null)
-            uiManager.SetMessage("Select enemy.");
     }
 
     public void HoverEnemy(BattleUnit enemy)
     {
-        if (state != BattleState.SelectingTarget) return;
-        if (enemy == null || enemy.IsDead) return;
+        if (state != BattleState.SelectingTarget)
+            return;
+
+        if (enemy == null || enemy.IsDead)
+            return;
 
         enemy.SetArrow(true);
     }
 
     public void ExitHoverEnemy(BattleUnit enemy)
     {
-        if (enemy == null) return;
+        if (enemy == null)
+            return;
 
         enemy.SetArrow(false);
     }
 
     public void ClickEnemy(BattleUnit enemy)
     {
-        if (state != BattleState.SelectingTarget) return;
-        if (enemy == null || enemy.IsDead) return;
+        if (state != BattleState.SelectingTarget)
+            return;
+
+        if (enemy == null || enemy.IsDead)
+            return;
 
         StartCoroutine(PlayerAttackRoutine(enemy));
     }
@@ -209,29 +236,31 @@ public class BattleManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.25f);
 
-        bool hit = RollHit(playerUnit.accuracy, target.evasion);
+        bool hit =
+            RollHit(playerUnit.accuracy, target.evasion);
 
         if (hit)
         {
             target.TakeDamage(playerUnit.attackPower);
-            ShowFloatingText(target.transform.position, playerUnit.attackPower.ToString());
 
-            if (uiManager != null)
-                uiManager.SetMessage("Player hit!");
+            ShowFloatingText(
+                target.transform.position,
+                playerUnit.attackPower.ToString()
+            );
         }
         else
         {
-            ShowFloatingText(target.transform.position, "MISS");
-
-            if (uiManager != null)
-                uiManager.SetMessage("Player missed!");
+            ShowFloatingText(
+                target.transform.position,
+                "MISS"
+            );
         }
 
         yield return new WaitForSeconds(actionDelay);
 
         if (AllEnemiesDead())
         {
-            EndBattle("Win!");
+            EndBattle();
             yield break;
         }
 
@@ -251,29 +280,31 @@ public class BattleManager : MonoBehaviour
 
             yield return new WaitForSeconds(0.25f);
 
-            bool hit = RollHit(enemy.accuracy, playerUnit.evasion);
+            bool hit =
+                RollHit(enemy.accuracy, playerUnit.evasion);
 
             if (hit)
             {
                 playerUnit.TakeDamage(enemy.attackPower);
-                ShowFloatingText(playerUnit.transform.position, enemy.attackPower.ToString());
 
-                if (uiManager != null)
-                    uiManager.SetMessage(enemy.unitName + " hit!");
+                ShowFloatingText(
+                    playerUnit.transform.position,
+                    enemy.attackPower.ToString()
+                );
             }
             else
             {
-                ShowFloatingText(playerUnit.transform.position, "MISS");
-
-                if (uiManager != null)
-                    uiManager.SetMessage(enemy.unitName + " missed!");
+                ShowFloatingText(
+                    playerUnit.transform.position,
+                    "MISS"
+                );
             }
 
             yield return new WaitForSeconds(actionDelay);
 
             if (playerUnit.IsDead)
             {
-                EndBattle("Player Dead...");
+                EndBattle();
                 yield break;
             }
         }
@@ -281,18 +312,15 @@ public class BattleManager : MonoBehaviour
         battleTurn++;
 
         if (uiManager != null)
-        {
-            uiManager.SetTurnText(battleTurn);
             uiManager.ShowMainBattleMenu();
-            uiManager.SetMessage("Player Turn.");
-        }
 
         state = BattleState.PlayerTurn;
     }
 
     public void OnClickRunButton()
     {
-        if (state != BattleState.PlayerTurn) return;
+        if (state != BattleState.PlayerTurn)
+            return;
 
         StartCoroutine(RunRoutine());
     }
@@ -305,18 +333,12 @@ public class BattleManager : MonoBehaviour
 
         if (roll < runSuccessPercent)
         {
-            if (uiManager != null)
-                uiManager.SetMessage("Run success!");
-
             yield return new WaitForSeconds(actionDelay);
 
-            EndBattle("Run Success");
+            EndBattle();
         }
         else
         {
-            if (uiManager != null)
-                uiManager.SetMessage("Run failed!");
-
             yield return new WaitForSeconds(actionDelay);
 
             yield return StartCoroutine(EnemyTurnRoutine());
@@ -326,9 +348,11 @@ public class BattleManager : MonoBehaviour
     private bool RollHit(int attackerAccuracy, int targetEvasion)
     {
         int chance = attackerAccuracy - targetEvasion;
+
         chance = Mathf.Clamp(chance, 10, 95);
 
         int roll = Random.Range(0, 100);
+
         return roll < chance;
     }
 
@@ -343,14 +367,11 @@ public class BattleManager : MonoBehaviour
         return true;
     }
 
-    private void EndBattle(string message)
+    private void EndBattle()
     {
         state = BattleState.BattleEnd;
 
         ClearEnemyArrows();
-
-        if (uiManager != null)
-            uiManager.SetMessage(message);
 
         StartCoroutine(EndBattleRoutine());
     }
@@ -368,6 +389,7 @@ public class BattleManager : MonoBehaviour
             uiManager.HideBattleUI();
 
         state = BattleState.None;
+
         battleRunning = false;
     }
 
@@ -385,10 +407,19 @@ public class BattleManager : MonoBehaviour
         if (floatingTextPrefab == null || worldCanvas == null)
             return;
 
-        TextMeshProUGUI obj = Instantiate(floatingTextPrefab, worldCanvas.transform);
+        TextMeshProUGUI obj =
+            Instantiate(
+                floatingTextPrefab,
+                worldCanvas.transform
+            );
+
         obj.text = text;
 
-        Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos + Vector3.up * 1.5f);
+        Vector3 screenPos =
+            Camera.main.WorldToScreenPoint(
+                worldPos + Vector3.up * 1.5f
+            );
+
         obj.transform.position = screenPos;
 
         Destroy(obj.gameObject, 0.8f);
