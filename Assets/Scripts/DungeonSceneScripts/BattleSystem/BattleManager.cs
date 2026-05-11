@@ -70,10 +70,11 @@ public class BattleManager : MonoBehaviour
     {
         battleRunning = true;
 
-        // EncounterPanel이 BattleRoot 안에 있으니까 부모부터 켜야 보임
-        if (uiManager != null && uiManager.battleRoot != null)
-            uiManager.battleRoot.SetActive(true);
+        // 전투 메뉴는 아직 숨김
+        if (uiManager != null)
+            uiManager.HideBattleUI();
 
+        // 전투 발생 패널만 표시
         if (encounterPanel != null)
             encounterPanel.SetActive(true);
 
@@ -84,24 +85,32 @@ public class BattleManager : MonoBehaviour
 
         yield return new WaitForSeconds(encounterMessageTime);
 
+        // 전투 발생 패널 끄기
         if (encounterPanel != null)
             encounterPanel.SetActive(false);
 
+        // 몬스터 생성
         SpawnEnemies();
 
+        // 이제 전투 메뉴 표시
         StartBattle();
     }
 
     private void StartBattle()
     {
         battleTurn = 1;
-
         state = BattleState.PlayerTurn;
+
+        Debug.Log("전투 UI 표시");
 
         if (uiManager != null)
         {
             uiManager.ShowBattleUI();
             uiManager.ShowMainBattleMenu();
+        }
+        else
+        {
+            Debug.LogError("BattleManager에 UI Manager가 연결되지 않음");
         }
     }
 
@@ -203,9 +212,14 @@ public class BattleManager : MonoBehaviour
     public void OnClickAttackButton()
     {
         if (state != BattleState.PlayerTurn)
+        {
+            Debug.Log("지금은 플레이어 턴이 아니라 공격 선택 불가");
             return;
+        }
 
         state = BattleState.SelectingTarget;
+
+        Debug.Log("공격 대상 선택 상태. 몬스터를 클릭하세요.");
     }
 
     public void HoverEnemy(BattleUnit enemy)
@@ -230,10 +244,18 @@ public class BattleManager : MonoBehaviour
     public void ClickEnemy(BattleUnit enemy)
     {
         if (state != BattleState.SelectingTarget)
+        {
+            Debug.Log("아직 공격 버튼을 누르지 않음");
             return;
+        }
 
         if (enemy == null || enemy.IsDead)
+        {
+            Debug.Log("공격할 수 없는 적");
             return;
+        }
+
+        Debug.Log(enemy.unitName + " 공격 실행");
 
         StartCoroutine(PlayerAttackRoutine(enemy));
     }

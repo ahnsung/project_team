@@ -3260,7 +3260,7 @@ MonoBehaviour:
   - {fileID: 1209010955}
   minEnemyCount: 1
   maxEnemyCount: 3
-  uiManager: {fileID: 565677479}
+  uiManager: {fileID: 1292522165}
   encounterPanel: {fileID: 848664022}
   encounterText: {fileID: 2067035176}
   floatingTextPrefab: {fileID: 0}
@@ -3268,7 +3268,7 @@ MonoBehaviour:
   battleTurn: 1
   encounterMessageTime: 1
   actionDelay: 0.6
-  runSuccessPercent: 50
+  runSuccessPercent: 100
 --- !u!1 &1074572323
 GameObject:
   m_ObjectHideFlags: 0
@@ -5105,13 +5105,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1836735076}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 7.42, y: 0.14, z: 0}
   m_LocalScale: {x: 0.34597862, y: 0.34597862, z: 0.34597862}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1410048248}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1836735078
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -5156,7 +5156,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 10
-  m_Sprite: {fileID: 21300000, guid: 9a9ce28b629668d4ebb49d8d6c10323d, type: 3}
+  m_Sprite: {fileID: -688399747926251461, guid: b9cf54eb9b204c84ca649f1a5a66ed0d, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -5277,7 +5277,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: e3e98e22d804a8240b4c5c62efc76198, type: 3}
+  m_Sprite: {fileID: -7443756053782179069, guid: d8422fa9df1ca924d9a132949bc806bf, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
