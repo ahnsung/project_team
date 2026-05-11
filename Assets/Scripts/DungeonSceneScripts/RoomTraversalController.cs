@@ -95,19 +95,20 @@ public class RoomTraversalController : MonoBehaviour
 
     private void CheckEvent()
     {
-        if (eventDone)
-            return;
+        if (eventDone) return;
 
         bool touchedLeftEvent =
             leftEventPoint != null &&
-            Vector3.Distance(transform.position, leftEventPoint.position) < 0.25f;
+            Mathf.Abs(transform.position.x - leftEventPoint.position.x) < 0.4f;
 
         bool touchedRightEvent =
             rightEventPoint != null &&
-            Vector3.Distance(transform.position, rightEventPoint.position) < 0.25f;
+            Mathf.Abs(transform.position.x - rightEventPoint.position.x) < 0.4f;
 
         if (touchedLeftEvent || touchedRightEvent)
         {
+            Debug.Log("이벤트 지점 도착");
+
             eventDone = true;
             StartCoroutine(EventRoutine());
         }
@@ -117,14 +118,25 @@ public class RoomTraversalController : MonoBehaviour
     {
         state = State.EventRunning;
 
+        Debug.Log("EventRoutine 실행됨");
+
         bool monsterEvent = Random.Range(0f, 100f) < monsterBattleChance;
 
         if (monsterEvent && battleManager != null)
         {
+            Debug.Log("전투 이벤트 실행");
+
             yield return StartCoroutine(battleManager.StartBattleEncounter());
+
+            // 전투가 완전히 끝날 때까지 대기
+            while (battleManager.IsBattleRunning())
+            {
+                yield return null;
+            }
         }
         else
         {
+            Debug.Log("전투 아님 / BattleManager 없음");
             yield return new WaitForSeconds(eventDuration);
         }
 

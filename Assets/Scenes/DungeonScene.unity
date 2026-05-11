@@ -213,6 +213,10 @@ Transform:
   m_Children:
   - {fileID: 1410048248}
   - {fileID: 1096765756}
+  - {fileID: 318661043}
+  - {fileID: 963636148}
+  - {fileID: 1209010955}
+  - {fileID: 620966255}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &106881796
@@ -776,15 +780,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 318661042}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -1, z: -0, w: 0}
-  m_LocalPosition: {x: -11.8, y: 0, z: 0}
-  m_LocalScale: {x: 2.890352, y: 2.890352, z: 2.890352}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 11.502548, y: 0.14, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 963636148}
-  - {fileID: 1209010955}
-  - {fileID: 620966255}
-  m_Father: {fileID: 1836735077}
+  m_Children: []
+  m_Father: {fileID: 96857858}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &341926643
 GameObject:
@@ -2064,11 +2065,11 @@ Transform:
   m_GameObject: {fileID: 620966254}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 2.25, y: -1.02, z: 0}
+  m_LocalPosition: {x: 13.752548, y: -0.88, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 318661043}
+  m_Father: {fileID: 96857858}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &638705090
 GameObject:
@@ -2657,11 +2658,11 @@ Transform:
   m_GameObject: {fileID: 963636147}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 11.502548, y: 0.14, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 318661043}
+  m_Father: {fileID: 96857858}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &972576500
 GameObject:
@@ -3250,7 +3251,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerUnit: {fileID: 1836735080}
-  monsterPool: []
+  monsterPool:
+  - {fileID: 11400000, guid: e258fa3da8c0abc41a5a0e16c8b3e4cb, type: 2}
   enemyGroup: {fileID: 318661043}
   enemySpawnPoints:
   - {fileID: 963636148}
@@ -3939,11 +3941,11 @@ Transform:
   m_GameObject: {fileID: 1209010954}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.14, y: 0, z: 0}
+  m_LocalPosition: {x: 15.642548, y: 0.14, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 318661043}
+  m_Father: {fileID: 96857858}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1209609801
 GameObject:
@@ -5107,8 +5109,7 @@ Transform:
   m_LocalPosition: {x: 7.42, y: 0.14, z: 0}
   m_LocalScale: {x: 0.34597862, y: 0.34597862, z: 0.34597862}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 318661043}
+  m_Children: []
   m_Father: {fileID: 1410048248}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!212 &1836735078
@@ -5189,7 +5190,7 @@ MonoBehaviour:
   dungeonManager: {fileID: 268140400}
   uiManager: {fileID: 117336928}
   fadeController: {fileID: 2125530133}
-  battleManager: {fileID: 0}
+  battleManager: {fileID: 1052808771}
   monsterBattleChance: 100
   eventDuration: 1
 --- !u!114 &1836735080
@@ -5210,7 +5211,7 @@ MonoBehaviour:
   attackPower: 10
   accuracy: 80
   evasion: 20
-  hpBarFill: {fileID: 0}
+  hpBarFill: {fileID: 1074572326}
   hpText: {fileID: 0}
   targetArrow: {fileID: 0}
   spriteRenderer: {fileID: 0}

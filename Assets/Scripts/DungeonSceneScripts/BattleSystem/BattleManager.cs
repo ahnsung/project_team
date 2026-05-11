@@ -70,11 +70,17 @@ public class BattleManager : MonoBehaviour
     {
         battleRunning = true;
 
+        // EncounterPanel이 BattleRoot 안에 있으니까 부모부터 켜야 보임
+        if (uiManager != null && uiManager.battleRoot != null)
+            uiManager.battleRoot.SetActive(true);
+
         if (encounterPanel != null)
             encounterPanel.SetActive(true);
 
         if (encounterText != null)
             encounterText.text = "전투 발생!";
+
+        Debug.Log("전투 발생 UI 표시");
 
         yield return new WaitForSeconds(encounterMessageTime);
 
@@ -175,7 +181,13 @@ public class BattleManager : MonoBehaviour
 
         for (int i = enemyGroup.childCount - 1; i >= 0; i--)
         {
-            Destroy(enemyGroup.GetChild(i).gameObject);
+            Transform child = enemyGroup.GetChild(i);
+
+            // BattleUnit이 붙은 실제 몬스터만 삭제
+            if (child.GetComponent<BattleUnit>() != null)
+            {
+                Destroy(child.gameObject);
+            }
         }
     }
 
