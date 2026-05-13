@@ -1,65 +1,64 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections;
 
 public class BattleUnit : MonoBehaviour
 {
-    [Header("Basic Stat")]
+    [Header("Info")]
     public string unitName;
-    public int maxHP = 20;
-    public int currentHP = 20;
+
+    [Header("Stat")]
+    public int maxHP = 30;
+    public int currentHP = 30;
+
     public int attackPower = 10;
-    public int accuracy = 70;
-    public int evasion = 30;
+    public int accuracy = 90;
+    public int evasion = 5;
+
+    [Header("State")]
+    public bool IsDead => currentHP <= 0;
 
     [Header("UI")]
     public Image hpBarFill;
-    public TextMeshProUGUI hpText;
     public GameObject targetArrow;
 
-    [Header("Visual")]
+    [Header("Render")]
     public SpriteRenderer spriteRenderer;
-    public Animator animator;
 
-    public bool IsDead => currentHP <= 0;
-
-    private Color originalColor;
-
+    [Header("Animation")]
     public BattleSpriteAnimator spriteAnimator;
+
     private void Awake()
     {
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
 
-        if (animator == null)
-            animator = GetComponent<Animator>();
-
-        if (spriteRenderer != null)
-            originalColor = spriteRenderer.color;
-
-        currentHP = maxHP;
-        RefreshHPUI();
-
-        if (targetArrow != null)
-            targetArrow.SetActive(false);
         if (spriteAnimator == null)
             spriteAnimator = GetComponent<BattleSpriteAnimator>();
-    }
-
-    public void Setup(string newName, int hp, int atk, int acc, int eva)
-    {
-        unitName = newName;
-        maxHP = hp;
-        currentHP = hp;
-        attackPower = atk;
-        accuracy = acc;
-        evasion = eva;
 
         RefreshHPUI();
 
-        if (targetArrow != null)
-            targetArrow.SetActive(false);
+        SetArrow(false);
+    }
+
+    public void Setup(
+        string newName,
+        int newMaxHP,
+        int newAttack,
+        int newAccuracy,
+        int newEvasion
+    )
+    {
+        unitName = newName;
+
+        maxHP = newMaxHP;
+        currentHP = maxHP;
+
+        attackPower = newAttack;
+        accuracy = newAccuracy;
+        evasion = newEvasion;
+
+        RefreshHPUI();
     }
 
     public void TakeDamage(int damage)
@@ -69,37 +68,46 @@ public class BattleUnit : MonoBehaviour
 
         currentHP -= damage;
 
-        if (currentHP < 0)
-            currentHP = 0;
+        currentHP = Mathf.Clamp(currentHP, 0, maxHP);
 
-        UpdateHPUI();
-
-        PlayHitAnimation();
+        RefreshHPUI();
 
         Debug.Log(unitName + " 데미지 : " + damage);
 
         if (currentHP <= 0)
         {
-            Debug.Log(unitName + " 사망");
-
-            PlayDeathAnimation();
-
             StartCoroutine(DeathRoutine());
         }
+        else
+        {
+            PlayHitAnimation();
+        }
+    }
+
+    private IEnumerator DeathRoutine()
+    {
+        PlayHitAnimation();
+
+        yield return new WaitForSeconds(0.2f);
+
+        PlayDeathAnimation();
+
+        yield return new WaitForSeconds(0.25f);
+
+        gameObject.SetActive(false);
     }
 
     public void RefreshHPUI()
     {
         if (hpBarFill != null)
+        {
             hpBarFill.fillAmount = (float)currentHP / maxHP;
-
-        if (hpText != null)
-            hpText.text = currentHP + " / " + maxHP;
+        }
     }
 
     public void SetArrow(bool active)
     {
-        if (targetArrow != null && !IsDead)
+        if (targetArrow != null)
             targetArrow.SetActive(active);
     }
 
@@ -119,29 +127,5 @@ public class BattleUnit : MonoBehaviour
     {
         if (spriteAnimator != null)
             spriteAnimator.PlayDead();
-    }
-
-    private IEnumerator HitColorRoutine()
-    {
-        if (spriteRenderer == null)
-            yield break;
-
-        spriteRenderer.color = Color.red;
-        yield return new WaitForSeconds(0.15f);
-        spriteRenderer.color = originalColor;
-    }
-
-    private IEnumerator DeathRoutine()
-    {
-        yield return new WaitForSeconds(0.4f);
-
-        gameObject.SetActive(false);
-    }
-    private void UpdateHPUI()
-    {
-        if (hpBarFill != null)
-        {
-            hpBarFill.fillAmount = (float)currentHP / maxHP;
-        }
     }
 }

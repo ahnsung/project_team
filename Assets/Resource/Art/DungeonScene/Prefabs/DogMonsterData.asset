@@ -17,4 +17,4 @@ MonoBehaviour:
   maxHP: 20
   attackPower: 10
   accuracy: 70
-  evasion: 30
+  evasion: 0

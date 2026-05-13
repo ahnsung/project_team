@@ -1681,12 +1681,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetCamera: {fileID: 590087851}
-  impactZoomSize: 2.2
-  zoomInTime: 0.1
-  holdTime: 0.1
-  zoomOutTime: 0.18
+  cameraFollow: {fileID: 590087854}
+  impactZoomSize: 4
+  zoomInTime: 0.2
+  holdTime: 0.2
+  zoomOutTime: 0.2
   shakeTime: 0.12
-  shakePower: 0.12
+  shakePower: 0.08
+  enemyHitOffsetX: 0.1
+  playerHitOffsetX: 0.35
+  focusOffsetY: 0.25
 --- !u!1 &553869755
 GameObject:
   m_ObjectHideFlags: 0
@@ -3448,13 +3452,16 @@ MonoBehaviour:
   minEnemyCount: 1
   maxEnemyCount: 3
   uiManager: {fileID: 1292522165}
-  encounterPanel: {fileID: 848664022}
-  encounterText: {fileID: 2067035176}
+  encounterPanel: {fileID: 0}
+  encounterText: {fileID: 0}
   floatingTextPrefab: {fileID: 0}
   worldCanvas: {fileID: 1096765755}
-  battleTurn: 1
   encounterMessageTime: 1
-  actionDelay: 0.3
+  attackStartDelay: 0.12
+  hitApplyDelay: 0.08
+  afterHitDelay: 0.45
+  actionDelay: 0.4
+  battleTurn: 1
   runSuccessPercent: 100
 --- !u!1 &1074572323
 GameObject:
@@ -5420,7 +5427,7 @@ Transform:
   m_GameObject: {fileID: 1836735076}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.42, y: 0.14, z: 0}
+  m_LocalPosition: {x: 6.06, y: 0.14, z: 0}
   m_LocalScale: {x: 0.34597862, y: 0.34597862, z: 0.34597862}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5520,10 +5527,8 @@ MonoBehaviour:
   accuracy: 80
   evasion: 20
   hpBarFill: {fileID: 1074572326}
-  hpText: {fileID: 0}
   targetArrow: {fileID: 0}
   spriteRenderer: {fileID: 0}
-  animator: {fileID: 0}
   spriteAnimator: {fileID: 0}
 --- !u!1 &1861808935
 GameObject:
@@ -5853,7 +5858,7 @@ Transform:
   m_GameObject: {fileID: 2073417760}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.42, y: 0.14, z: 0}
+  m_LocalPosition: {x: 6.06, y: 0.14, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
