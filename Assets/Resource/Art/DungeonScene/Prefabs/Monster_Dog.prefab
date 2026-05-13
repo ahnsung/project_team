@@ -473,7 +473,7 @@ MonoBehaviour:
   currentHP: 20
   attackPower: 10
   accuracy: 70
-  evasion: 30
+  evasion: 0
   hpBarFill: {fileID: 6479749612819369342}
   targetArrow: {fileID: 3905720313798659457}
   spriteRenderer: {fileID: 0}

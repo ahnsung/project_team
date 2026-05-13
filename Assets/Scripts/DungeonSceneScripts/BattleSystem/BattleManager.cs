@@ -139,12 +139,20 @@ public class BattleManager : MonoBehaviour
             );
 
             BattleUnit unit = enemyObj.GetComponent<BattleUnit>();
+
             if (unit == null)
                 unit = enemyObj.AddComponent<BattleUnit>();
 
-            unit.Setup(data.monsterName, data.maxHP, data.attackPower, data.accuracy, data.evasion);
+            unit.Setup(
+                data.monsterName,
+                data.maxHP,
+                data.attackPower,
+                data.accuracy,
+                data.evasion
+            );
 
             BattleEnemyClick click = enemyObj.GetComponent<BattleEnemyClick>();
+
             if (click == null)
                 click = enemyObj.AddComponent<BattleEnemyClick>();
 
@@ -160,6 +168,12 @@ public class BattleManager : MonoBehaviour
 
     private void ClearEnemies()
     {
+        foreach (BattleUnit enemy in enemies)
+        {
+            if (enemy != null)
+                Destroy(enemy.gameObject);
+        }
+
         enemies.Clear();
 
         if (enemyGroup == null)
@@ -167,10 +181,7 @@ public class BattleManager : MonoBehaviour
 
         for (int i = enemyGroup.childCount - 1; i >= 0; i--)
         {
-            Transform child = enemyGroup.GetChild(i);
-
-            if (child.GetComponent<BattleUnit>() != null)
-                Destroy(child.gameObject);
+            Destroy(enemyGroup.GetChild(i).gameObject);
         }
     }
 
@@ -204,7 +215,7 @@ public class BattleManager : MonoBehaviour
         if (state != BattleState.SelectingTarget)
             return;
 
-        if (enemy == null || enemy.IsDead)
+        if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
             return;
 
         enemy.SetArrow(true);
@@ -241,8 +252,11 @@ public class BattleManager : MonoBehaviour
         bool hit = RollHit(playerUnit.accuracy, target.evasion);
 
         Coroutine cameraRoutine = null;
+
         if (battleCamera != null)
-            cameraRoutine = StartCoroutine(battleCamera.AttackImpactZoom(playerUnit.transform, target.transform));
+            cameraRoutine = StartCoroutine(
+                battleCamera.AttackImpactZoom(playerUnit.transform, target.transform)
+            );
 
         yield return new WaitForSeconds(hitApplyDelay);
 
@@ -278,14 +292,9 @@ public class BattleManager : MonoBehaviour
 
         RemoveDeadEnemies();
 
-        BattleUnit[] aliveEnemies = enemies.ToArray();
-
-        foreach (BattleUnit enemy in aliveEnemies)
+        foreach (BattleUnit enemy in enemies.ToArray())
         {
-            if (enemy == null)
-                continue;
-
-            if (enemy.IsDead || !enemy.gameObject.activeInHierarchy)
+            if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
                 continue;
 
             enemy.PlayAttackAnimation();
@@ -325,7 +334,9 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        RemoveDeadEnemies();
+        // 모든 적 행동이 끝난 뒤에 딱 1번만 실행
+        if (DungeonTurnManager.Instance != null)
+            DungeonTurnManager.Instance.AddTurn(1);
 
         if (uiManager != null)
             uiManager.ShowMainBattleMenu();
@@ -364,7 +375,7 @@ public class BattleManager : MonoBehaviour
         enemies.RemoveAll(enemy =>
             enemy == null ||
             enemy.IsDead ||
-            !enemy.gameObject.activeInHierarchy
+            !enemy.gameObject.activeSelf
         );
     }
 

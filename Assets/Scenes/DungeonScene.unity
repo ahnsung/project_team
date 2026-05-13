@@ -1791,6 +1791,7 @@ MonoBehaviour:
   battleRoot: {fileID: 0}
   battleMenuPanel: {fileID: 0}
   actionMenuPanel: {fileID: 0}
+  currentTurnText: {fileID: 0}
 --- !u!1 &567781534
 GameObject:
   m_ObjectHideFlags: 0
@@ -2415,6 +2416,7 @@ Transform:
   - {fileID: 1052808770}
   - {fileID: 547160584}
   - {fileID: 1446980066}
+  - {fileID: 1954939221}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &846517665
@@ -5042,6 +5044,7 @@ MonoBehaviour:
   battleRoot: {fileID: 1292522161}
   battleMenuPanel: {fileID: 638705090}
   actionMenuPanel: {fileID: 218388342}
+  currentTurnText: {fileID: 903836795}
 --- !u!1 &1302871163
 GameObject:
   m_ObjectHideFlags: 0
@@ -6102,6 +6105,7 @@ GameObject:
   - component: {fileID: 1836735078}
   - component: {fileID: 1836735079}
   - component: {fileID: 1836735080}
+  - component: {fileID: 1836735081}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -6215,12 +6219,77 @@ MonoBehaviour:
   maxHP: 200
   currentHP: 200
   attackPower: 10
-  accuracy: 80
+  accuracy: 100
   evasion: 20
   hpBarFill: {fileID: 1074572326}
   targetArrow: {fileID: 0}
   spriteRenderer: {fileID: 0}
   spriteAnimator: {fileID: 0}
+--- !u!114 &1836735081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1836735076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55ece06a4ae88b5479f15f29a2f05706, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spriteRenderer: {fileID: 1836735078}
+  idleSprite: {fileID: 3427114271967980436, guid: acbe8d287f710394e963a7b546f8f5ba, type: 3}
+  attackSprite: {fileID: 266377654051865732, guid: 4317c985cd95a64458decf593e248b9b, type: 3}
+  hitSprite: {fileID: 0}
+  deadSprite: {fileID: 0}
+  attackTime: 0.5
+  hitTime: 0.5
+--- !u!1 &1954939220
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1954939221}
+  - component: {fileID: 1954939222}
+  m_Layer: 0
+  m_Name: DungeonTurnManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1954939221
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1954939220}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1954939222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1954939220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57546bb32dd0fd24bac72366a3f9e327, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentTurn: 1
+  currentTurnText: {fileID: 903836795}
 --- !u!1 &2036500617
 GameObject:
   m_ObjectHideFlags: 0

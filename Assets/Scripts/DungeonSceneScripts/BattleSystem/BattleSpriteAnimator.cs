@@ -34,23 +34,29 @@ public class BattleSpriteAnimator : MonoBehaviour
 
     public void PlayAttack()
     {
-        PlaySpriteRoutine(attackSprite, attackTime);
+        PlayTemporarySprite(attackSprite, attackTime);
     }
 
     public void PlayHit()
     {
-        PlaySpriteRoutine(hitSprite, hitTime);
+        PlayTemporarySprite(hitSprite, hitTime);
     }
 
     public void PlayDead()
     {
+        if (currentRoutine != null)
+            StopCoroutine(currentRoutine);
+
         if (spriteRenderer != null && deadSprite != null)
             spriteRenderer.sprite = deadSprite;
     }
 
-    private void PlaySpriteRoutine(Sprite targetSprite, float duration)
+    private void PlayTemporarySprite(Sprite targetSprite, float duration)
     {
-        if (spriteRenderer == null || targetSprite == null)
+        if (spriteRenderer == null)
+            return;
+
+        if (targetSprite == null)
             return;
 
         if (currentRoutine != null)

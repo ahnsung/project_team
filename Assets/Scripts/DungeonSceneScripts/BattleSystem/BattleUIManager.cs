@@ -4,9 +4,13 @@ public class BattleUIManager : MonoBehaviour
 {
     [Header("Panels")]
     public GameObject battleRoot;
-
     public GameObject battleMenuPanel;
     public GameObject actionMenuPanel;
+
+    private void Awake()
+    {
+        HideBattleUI();
+    }
 
     public void ShowBattleUI()
     {
@@ -20,10 +24,19 @@ public class BattleUIManager : MonoBehaviour
     {
         if (battleRoot != null)
             battleRoot.SetActive(false);
+
+        if (battleMenuPanel != null)
+            battleMenuPanel.SetActive(false);
+
+        if (actionMenuPanel != null)
+            actionMenuPanel.SetActive(false);
     }
 
     public void ShowMainBattleMenu()
     {
+        if (battleRoot != null)
+            battleRoot.SetActive(true);
+
         if (battleMenuPanel != null)
             battleMenuPanel.SetActive(true);
 
@@ -33,6 +46,9 @@ public class BattleUIManager : MonoBehaviour
 
     public void ShowActionMenu()
     {
+        if (battleRoot != null)
+            battleRoot.SetActive(true);
+
         if (battleMenuPanel != null)
             battleMenuPanel.SetActive(false);
 
