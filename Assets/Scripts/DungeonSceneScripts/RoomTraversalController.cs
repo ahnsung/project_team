@@ -3,175 +3,94 @@ using UnityEngine;
 
 public class RoomTraversalController : MonoBehaviour
 {
-    private enum State
+    private enum RoomState
     {
-        Exploring,      // 방 안에서 자유롭게 A/D 이동 가능
-        EventRunning,   // 이벤트 진행 중
-        Waiting,        // 출구 도착 후 방향 선택 UI 대기
-        Transition      // 방 이동 중
+        EventRunning,
+        WaitingForSpace,
+        DirectionChoosing,
+        Transition
     }
 
-    [Header("Movement")]
-    [SerializeField] private float moveSpeed = 4f;
-
-    [Header("Move Clamp")]
-    [SerializeField] private float minX = -8f;
-    [SerializeField] private float maxX = 8f;
-
     [Header("Points")]
-    [SerializeField] private Transform startPoint;
-
-    [Header("Event Points")]
-    [SerializeField] private Transform leftEventPoint;
-    [SerializeField] private Transform rightEventPoint;
-
-    [Header("Exit Points")]
-    [SerializeField] private Transform leftExitPoint;
-    [SerializeField] private Transform rightExitPoint;
+    [SerializeField] private Transform playerCenterPoint;
 
     [Header("Managers")]
     [SerializeField] private DungeonManager dungeonManager;
     [SerializeField] private DungeonUIManager uiManager;
     [SerializeField] private FadeController fadeController;
-
-    [Header("Battle")]
     [SerializeField] private BattleManager battleManager;
-    [SerializeField] private float monsterBattleChance = 50f;
+    [SerializeField] private CameraRoomTransition cameraRoomTransition;
 
-    [Header("Dummy Event")]
-    [SerializeField] private float eventDuration = 1f;
+    [Header("Event")]
+    [SerializeField] private float monsterBattleChance = 100f;
+    [SerializeField] private float emptyEventDuration = 1f;
 
-    private State state;
-
-    private bool eventDone;
-    private bool exitDone;
+    private RoomState state;
     private bool isTransitioning;
 
     private void Start()
     {
-        StartRoom();
-    }
-
-    private void Update()
-    {
-        if (state != State.Exploring)
-            return;
-
-        Move();
-        CheckEvent();
-        CheckExit();
-    }
-
-    private void StartRoom()
-    {
-        transform.position = startPoint.position;
-
-        eventDone = false;
-        exitDone = false;
-        isTransitioning = false;
+        if (playerCenterPoint != null)
+            transform.position = playerCenterPoint.position;
 
         if (uiManager != null)
             uiManager.HideDirectionPanel();
 
-        state = State.Exploring;
+        StartCoroutine(RoomStartRoutine());
     }
 
-    private void Move()
+    private void Update()
     {
-        float h = 0f;
-
-        if (Input.GetKey(KeyCode.A))
-            h = -1f;
-
-        if (Input.GetKey(KeyCode.D))
-            h = 1f;
-
-        Vector3 pos = transform.position;
-        pos.x += h * moveSpeed * Time.deltaTime;
-        pos.x = Mathf.Clamp(pos.x, minX, maxX);
-
-        transform.position = pos;
-    }
-
-    private void CheckEvent()
-    {
-        if (eventDone) return;
-
-        bool touchedLeftEvent =
-            leftEventPoint != null &&
-            Mathf.Abs(transform.position.x - leftEventPoint.position.x) < 0.4f;
-
-        bool touchedRightEvent =
-            rightEventPoint != null &&
-            Mathf.Abs(transform.position.x - rightEventPoint.position.x) < 0.4f;
-
-        if (touchedLeftEvent || touchedRightEvent)
+        if (state == RoomState.WaitingForSpace)
         {
-            Debug.Log("이벤트 지점 도착");
-
-            eventDone = true;
-            StartCoroutine(EventRoutine());
+            if (Input.GetKeyDown(KeyCode.Space))
+                OpenDirectionPanel();
         }
     }
 
-    private IEnumerator EventRoutine()
+    private IEnumerator RoomStartRoutine()
     {
-        state = State.EventRunning;
+        // 게임 시작 첫 방에서는 페이드 없이 바로 이벤트 시작
+        yield return StartCoroutine(RunRoomEvent());
+    }
+    private IEnumerator RunRoomEvent()
+    {
+        state = RoomState.EventRunning;
 
-        Debug.Log("EventRoutine 실행됨");
+        if (playerCenterPoint != null)
+            transform.position = playerCenterPoint.position;
 
-        bool monsterEvent = Random.Range(0f, 100f) < monsterBattleChance;
+        bool isBattleEvent = Random.Range(0f, 100f) < monsterBattleChance;
 
-        if (monsterEvent && battleManager != null)
+        if (isBattleEvent && battleManager != null)
         {
-            Debug.Log("전투 이벤트 실행");
-
             yield return StartCoroutine(battleManager.StartBattleEncounter());
 
-            // 전투가 완전히 끝날 때까지 대기
             while (battleManager.IsBattleRunning())
-            {
                 yield return null;
-            }
         }
         else
         {
-            Debug.Log("전투 아님 / BattleManager 없음");
-            yield return new WaitForSeconds(eventDuration);
+            yield return new WaitForSeconds(emptyEventDuration);
         }
 
-        state = State.Exploring;
+        state = RoomState.WaitingForSpace;
     }
 
-    private void CheckExit()
+    private void OpenDirectionPanel()
     {
-        if (exitDone)
-            return;
+        if (dungeonManager != null)
+            dungeonManager.RefreshAll();
 
-        bool touchedLeftExit =
-            leftExitPoint != null &&
-            Vector3.Distance(transform.position, leftExitPoint.position) < 0.25f;
+        if (uiManager != null)
+            uiManager.ShowDirectionPanel();
 
-        bool touchedRightExit =
-            rightExitPoint != null &&
-            Vector3.Distance(transform.position, rightExitPoint.position) < 0.25f;
-
-        if (touchedLeftExit || touchedRightExit)
-        {
-            exitDone = true;
-            state = State.Waiting;
-
-            if (dungeonManager != null)
-                dungeonManager.RefreshAll();
-
-            if (uiManager != null)
-                uiManager.ShowDirectionPanel();
-        }
+        state = RoomState.DirectionChoosing;
     }
 
     public void SelectNextRoom(MoveDirection dir)
     {
-        if (state != State.Waiting)
+        if (state != RoomState.DirectionChoosing)
             return;
 
         if (isTransitioning)
@@ -180,13 +99,26 @@ public class RoomTraversalController : MonoBehaviour
         StartCoroutine(ChangeRoom(dir));
     }
 
+    public void CloseDirectionPanel()
+    {
+        if (uiManager != null)
+            uiManager.HideDirectionPanel();
+
+        state = RoomState.WaitingForSpace;
+    }
+
     private IEnumerator ChangeRoom(MoveDirection dir)
     {
         isTransitioning = true;
-        state = State.Transition;
+        state = RoomState.Transition;
 
         if (uiManager != null)
             uiManager.HideDirectionPanel();
+
+        // 좌/우만 카메라 이동 연출
+        // 위/아래는 CameraRoomTransition 안에서 이동 없이 넘어감
+        if (cameraRoomTransition != null)
+            yield return cameraRoomTransition.PlayRoomMove(dir);
 
         if (fadeController != null)
             yield return fadeController.FadeOut();
@@ -194,15 +126,17 @@ public class RoomTraversalController : MonoBehaviour
         if (dungeonManager != null)
             dungeonManager.MoveToNextRoom(dir);
 
-        transform.position = startPoint.position;
+        if (playerCenterPoint != null)
+            transform.position = playerCenterPoint.position;
 
-        eventDone = false;
-        exitDone = false;
+        if (cameraRoomTransition != null)
+            cameraRoomTransition.ResetCameraPosition();
 
         if (fadeController != null)
             yield return fadeController.FadeIn();
 
-        state = State.Exploring;
         isTransitioning = false;
+
+        yield return StartCoroutine(RunRoomEvent());
     }
 }

@@ -64,14 +64,28 @@ public class BattleUnit : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        if (IsDead)
+            return;
+
         currentHP -= damage;
-        currentHP = Mathf.Clamp(currentHP, 0, maxHP);
-        RefreshHPUI();
+
+        if (currentHP < 0)
+            currentHP = 0;
+
+        UpdateHPUI();
 
         PlayHitAnimation();
 
-        if (IsDead)
+        Debug.Log(unitName + " 데미지 : " + damage);
+
+        if (currentHP <= 0)
+        {
+            Debug.Log(unitName + " 사망");
+
             PlayDeathAnimation();
+
+            StartCoroutine(DeathRoutine());
+        }
     }
 
     public void RefreshHPUI()
@@ -115,5 +129,19 @@ public class BattleUnit : MonoBehaviour
         spriteRenderer.color = Color.red;
         yield return new WaitForSeconds(0.15f);
         spriteRenderer.color = originalColor;
+    }
+
+    private IEnumerator DeathRoutine()
+    {
+        yield return new WaitForSeconds(0.4f);
+
+        gameObject.SetActive(false);
+    }
+    private void UpdateHPUI()
+    {
+        if (hpBarFill != null)
+        {
+            hpBarFill.fillAmount = (float)currentHP / maxHP;
+        }
     }
 }

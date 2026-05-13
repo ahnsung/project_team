@@ -5,6 +5,8 @@ using TMPro;
 
 public class BattleManager : MonoBehaviour
 {
+    [Header("Camera")]
+    public BattleCameraController battleCamera;
     private enum BattleState
     {
         None,
@@ -268,7 +270,10 @@ public class BattleManager : MonoBehaviour
 
         playerUnit.PlayAttackAnimation();
 
-        yield return new WaitForSeconds(0.25f);
+        if (battleCamera != null)
+            yield return battleCamera.AttackImpactZoom(playerUnit.transform, target.transform);
+        else
+            yield return new WaitForSeconds(0.25f);
 
         bool hit =
             RollHit(playerUnit.accuracy, target.evasion);
@@ -312,7 +317,10 @@ public class BattleManager : MonoBehaviour
 
             enemy.PlayAttackAnimation();
 
-            yield return new WaitForSeconds(0.25f);
+            if (battleCamera != null)
+                yield return battleCamera.AttackImpactZoom(enemy.transform, playerUnit.transform);
+            else
+                yield return new WaitForSeconds(0.25f);
 
             bool hit =
                 RollHit(enemy.accuracy, playerUnit.evasion);
@@ -394,7 +402,10 @@ public class BattleManager : MonoBehaviour
     {
         foreach (BattleUnit enemy in enemies)
         {
-            if (enemy != null && !enemy.IsDead)
+            if (enemy == null)
+                continue;
+
+            if (enemy.gameObject.activeSelf && !enemy.IsDead)
                 return false;
         }
 

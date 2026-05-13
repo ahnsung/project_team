@@ -89,4 +89,10 @@ public class DungeonUIManager : MonoBehaviour
         if (roomTraversalController != null)
             roomTraversalController.SelectNextRoom(MoveDirection.Right);
     }
+
+    public void OnClickCloseDirectionPanel()
+    {
+        if (roomTraversalController != null)
+            roomTraversalController.CloseDirectionPanel();
+    }
 }
