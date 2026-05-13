@@ -278,9 +278,14 @@ public class BattleManager : MonoBehaviour
 
         RemoveDeadEnemies();
 
-        foreach (BattleUnit enemy in enemies.ToArray())
+        BattleUnit[] aliveEnemies = enemies.ToArray();
+
+        foreach (BattleUnit enemy in aliveEnemies)
         {
-            if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
+            if (enemy == null)
+                continue;
+
+            if (enemy.IsDead || !enemy.gameObject.activeInHierarchy)
                 continue;
 
             enemy.PlayAttackAnimation();
@@ -290,8 +295,11 @@ public class BattleManager : MonoBehaviour
             bool hit = RollHit(enemy.accuracy, playerUnit.evasion);
 
             Coroutine cameraRoutine = null;
+
             if (battleCamera != null)
-                cameraRoutine = StartCoroutine(battleCamera.AttackImpactZoom(enemy.transform, playerUnit.transform));
+                cameraRoutine = StartCoroutine(
+                    battleCamera.AttackImpactZoom(enemy.transform, playerUnit.transform)
+                );
 
             yield return new WaitForSeconds(hitApplyDelay);
 
@@ -317,7 +325,7 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        battleTurn++;
+        RemoveDeadEnemies();
 
         if (uiManager != null)
             uiManager.ShowMainBattleMenu();
@@ -356,7 +364,7 @@ public class BattleManager : MonoBehaviour
         enemies.RemoveAll(enemy =>
             enemy == null ||
             enemy.IsDead ||
-            !enemy.gameObject.activeSelf
+            !enemy.gameObject.activeInHierarchy
         );
     }
 
