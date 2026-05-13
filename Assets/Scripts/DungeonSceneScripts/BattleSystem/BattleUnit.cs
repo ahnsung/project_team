@@ -26,6 +26,7 @@ public class BattleUnit : MonoBehaviour
 
     private Color originalColor;
 
+    public BattleSpriteAnimator spriteAnimator;
     private void Awake()
     {
         if (spriteRenderer == null)
@@ -42,6 +43,8 @@ public class BattleUnit : MonoBehaviour
 
         if (targetArrow != null)
             targetArrow.SetActive(false);
+        if (spriteAnimator == null)
+            spriteAnimator = GetComponent<BattleSpriteAnimator>();
     }
 
     public void Setup(string newName, int hp, int atk, int acc, int eva)
@@ -88,22 +91,20 @@ public class BattleUnit : MonoBehaviour
 
     public void PlayAttackAnimation()
     {
-        if (animator != null)
-            animator.SetTrigger("Attack");
+        if (spriteAnimator != null)
+            spriteAnimator.PlayAttack();
     }
 
     public void PlayHitAnimation()
     {
-        if (animator != null)
-            animator.SetTrigger("Hit");
-
-        StartCoroutine(HitColorRoutine());
+        if (spriteAnimator != null)
+            spriteAnimator.PlayHit();
     }
 
     public void PlayDeathAnimation()
     {
-        if (animator != null)
-            animator.SetTrigger("Die");
+        if (spriteAnimator != null)
+            spriteAnimator.PlayDead();
     }
 
     private IEnumerator HitColorRoutine()
