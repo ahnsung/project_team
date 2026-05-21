@@ -44,7 +44,6 @@ public class BattleManager : MonoBehaviour
     public float actionDelay = 0.6f;
 
     [Header("Battle Setting")]
-    public int battleTurn = 1;
     public int runSuccessPercent = 50;
 
     private BattleState state = BattleState.None;
@@ -92,7 +91,6 @@ public class BattleManager : MonoBehaviour
 
     private void StartBattle()
     {
-        battleTurn = 1;
         state = BattleState.PlayerTurn;
 
         if (uiManager != null)
@@ -168,12 +166,6 @@ public class BattleManager : MonoBehaviour
 
     private void ClearEnemies()
     {
-        foreach (BattleUnit enemy in enemies)
-        {
-            if (enemy != null)
-                Destroy(enemy.gameObject);
-        }
-
         enemies.Clear();
 
         if (enemyGroup == null)
@@ -181,7 +173,10 @@ public class BattleManager : MonoBehaviour
 
         for (int i = enemyGroup.childCount - 1; i >= 0; i--)
         {
-            Destroy(enemyGroup.GetChild(i).gameObject);
+            Transform child = enemyGroup.GetChild(i);
+
+            if (child.GetComponent<BattleUnit>() != null)
+                Destroy(child.gameObject);
         }
     }
 
@@ -215,7 +210,7 @@ public class BattleManager : MonoBehaviour
         if (state != BattleState.SelectingTarget)
             return;
 
-        if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
+        if (enemy == null || enemy.IsDead || !enemy.gameObject.activeInHierarchy)
             return;
 
         enemy.SetArrow(true);
@@ -234,7 +229,7 @@ public class BattleManager : MonoBehaviour
         if (state != BattleState.SelectingTarget)
             return;
 
-        if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
+        if (enemy == null || enemy.IsDead || !enemy.gameObject.activeInHierarchy)
             return;
 
         StartCoroutine(PlayerAttackRoutine(enemy));
@@ -254,9 +249,11 @@ public class BattleManager : MonoBehaviour
         Coroutine cameraRoutine = null;
 
         if (battleCamera != null)
+        {
             cameraRoutine = StartCoroutine(
                 battleCamera.AttackImpactZoom(playerUnit.transform, target.transform)
             );
+        }
 
         yield return new WaitForSeconds(hitApplyDelay);
 
@@ -279,6 +276,9 @@ public class BattleManager : MonoBehaviour
 
         if (AllEnemiesDead())
         {
+            if (DungeonManager.Instance != null)
+                DungeonManager.Instance.AddTurn("전투 승리");
+
             EndBattle();
             yield break;
         }
@@ -292,9 +292,14 @@ public class BattleManager : MonoBehaviour
 
         RemoveDeadEnemies();
 
-        foreach (BattleUnit enemy in enemies.ToArray())
+        BattleUnit[] aliveEnemies = enemies.ToArray();
+
+        foreach (BattleUnit enemy in aliveEnemies)
         {
-            if (enemy == null || enemy.IsDead || !enemy.gameObject.activeSelf)
+            if (enemy == null)
+                continue;
+
+            if (enemy.IsDead || !enemy.gameObject.activeInHierarchy)
                 continue;
 
             enemy.PlayAttackAnimation();
@@ -306,9 +311,11 @@ public class BattleManager : MonoBehaviour
             Coroutine cameraRoutine = null;
 
             if (battleCamera != null)
+            {
                 cameraRoutine = StartCoroutine(
                     battleCamera.AttackImpactZoom(enemy.transform, playerUnit.transform)
                 );
+            }
 
             yield return new WaitForSeconds(hitApplyDelay);
 
@@ -334,9 +341,13 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // 모든 적 행동이 끝난 뒤에 딱 1번만 실행
-        if (DungeonTurnManager.Instance != null)
-            DungeonTurnManager.Instance.AddTurn(1);
+        RemoveDeadEnemies();
+
+        // 전투 한 라운드 종료 → 던전 전체 턴 +1
+        if (DungeonManager.Instance != null)
+            DungeonManager.Instance.AddTurn("전투 라운드 종료");
+        else
+            Debug.LogWarning("DungeonManager.Instance가 없음");
 
         if (uiManager != null)
             uiManager.ShowMainBattleMenu();
@@ -349,10 +360,13 @@ public class BattleManager : MonoBehaviour
         state = BattleState.EnemyTurn;
 
         int roll = Random.Range(0, 100);
-
         if (roll < runSuccessPercent)
         {
             yield return new WaitForSeconds(actionDelay);
+
+            if (DungeonManager.Instance != null)
+                DungeonManager.Instance.AddTurn("도망 성공");
+
             EndBattle();
         }
         else
@@ -375,7 +389,7 @@ public class BattleManager : MonoBehaviour
         enemies.RemoveAll(enemy =>
             enemy == null ||
             enemy.IsDead ||
-            !enemy.gameObject.activeSelf
+            !enemy.gameObject.activeInHierarchy
         );
     }
 

@@ -13,7 +13,11 @@ public class DungeonTurnManager : MonoBehaviour
 
     private void Awake()
     {
-        Instance = this;
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+
         RefreshUI();
     }
 
@@ -21,7 +25,7 @@ public class DungeonTurnManager : MonoBehaviour
     {
         currentTurn += amount;
         RefreshUI();
-        Debug.Log("[Dungeon Turn] 현재 턴 : " + currentTurn);
+        Debug.Log("Current Turn : " + currentTurn);
     }
 
     public void RefreshUI()
