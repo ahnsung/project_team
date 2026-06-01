@@ -40,16 +40,16 @@ public class InventoryManager : MonoBehaviour
 
         InventoryItem newItem = new InventoryItem(data);
 
-        for (int y = 0; y < height; y++)
+        for (int y = 0; y < unlockedHeight; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < unlockedWidth; x++)
             {
                 Vector2Int pos = new Vector2Int(x, y);
 
                 if (CanPlaceItem(newItem, pos, null))
                 {
-                    PlaceItem(newItem, pos);
                     items.Add(newItem);
+                    PlaceItem(newItem, pos);
 
                     InventoryUIManager.Instance.RefreshUI();
                     return true;
@@ -61,81 +61,42 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
-    public bool CanPlaceItem(InventoryItem item, Vector2Int targetPos, InventoryItem ignoreItem)
-    {
-        List<Vector2Int> cells = item.GetOccupiedCells(targetPos);
-
-        foreach (Vector2Int cell in cells)
-        {
-            if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height)
-                return false;
-
-            if (cell.x >= unlockedWidth || cell.y >= unlockedHeight)
-                return false;
-
-            InventoryItem occupying = grid[cell.x, cell.y];
-
-            if (occupying != null && occupying != ignoreItem)
-                return false;
-        }
-
-        return true;
-    }
-
-    public InventoryItem GetItemAt(Vector2Int cell)
-    {
-        if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height)
-            return null;
-
-        return grid[cell.x, cell.y];
-    }
-
-    public List<InventoryItem> GetOverlappedItems(InventoryItem movingItem, Vector2Int targetPos)
-    {
-        List<InventoryItem> result = new List<InventoryItem>();
-
-        foreach (Vector2Int cell in movingItem.GetOccupiedCells(targetPos))
-        {
-            if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height)
-                continue;
-
-            InventoryItem other = grid[cell.x, cell.y];
-
-            if (other != null && other != movingItem && !result.Contains(other))
-                result.Add(other);
-        }
-
-        return result;
-    }
-
     public bool TryMoveItem(InventoryItem movingItem, Vector2Int targetPos)
     {
+        if (movingItem == null) return false;
+
         Vector2Int originalPos = movingItem.position;
+
+        if (!IsInsideUnlocked(targetPos))
+        {
+            InventoryUIManager.Instance.RefreshUI();
+            return false;
+        }
 
         RemoveFromGrid(movingItem);
 
-        List<InventoryItem> overlapped = GetOverlappedItems(movingItem, targetPos);
+        List<InventoryItem> overlappedItems = GetOverlappedItems(movingItem, targetPos);
 
-        if (overlapped.Count == 0)
+        if (overlappedItems.Count == 0)
         {
-            if (CanPlaceItem(movingItem, targetPos, movingItem))
+            if (CanPlaceItem(movingItem, targetPos, null))
             {
                 PlaceItem(movingItem, targetPos);
                 InventoryUIManager.Instance.RefreshUI();
                 return true;
             }
         }
-        else if (overlapped.Count == 1)
+        else if (overlappedItems.Count == 1)
         {
-            InventoryItem swapItem = overlapped[0];
+            InventoryItem swapItem = overlappedItems[0];
             Vector2Int swapOriginalPos = swapItem.position;
 
             RemoveFromGrid(swapItem);
 
-            bool canMovingGoTarget = CanPlaceItem(movingItem, targetPos, movingItem);
-            bool canSwapGoOriginal = CanPlaceItem(swapItem, originalPos, swapItem);
+            bool canMove = CanPlaceItem(movingItem, targetPos, null);
+            bool canSwap = CanPlaceItem(swapItem, originalPos, null);
 
-            if (canMovingGoTarget && canSwapGoOriginal)
+            if (canMove && canSwap)
             {
                 PlaceItem(movingItem, targetPos);
                 PlaceItem(swapItem, originalPos);
@@ -152,6 +113,40 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
+    public bool CanPlaceItem(InventoryItem item, Vector2Int targetPos, InventoryItem ignoreItem)
+    {
+        foreach (Vector2Int cell in item.GetOccupiedCells(targetPos))
+        {
+            if (!IsInsideUnlocked(cell))
+                return false;
+
+            InventoryItem occupying = grid[cell.x, cell.y];
+
+            if (occupying != null && occupying != ignoreItem)
+                return false;
+        }
+
+        return true;
+    }
+
+    public List<InventoryItem> GetOverlappedItems(InventoryItem movingItem, Vector2Int targetPos)
+    {
+        List<InventoryItem> result = new List<InventoryItem>();
+
+        foreach (Vector2Int cell in movingItem.GetOccupiedCells(targetPos))
+        {
+            if (!IsInside(cell))
+                continue;
+
+            InventoryItem other = grid[cell.x, cell.y];
+
+            if (other != null && other != movingItem && !result.Contains(other))
+                result.Add(other);
+        }
+
+        return result;
+    }
+
     public void UseItem(InventoryItem item)
     {
         if (item == null) return;
@@ -166,14 +161,10 @@ public class InventoryManager : MonoBehaviour
         if (item.data.consumeTurnOnUse)
         {
             Debug.Log("아이템 사용으로 턴 +1");
-            // 나중에 CurrentTurnManager 있으면 여기 연결
-            // CurrentTurnManager.Instance.AddTurn(1);
         }
 
         if (item.remainUseCount <= 0)
-        {
             RemoveItem(item);
-        }
 
         InventoryUIManager.Instance.RefreshUI();
     }
@@ -194,7 +185,8 @@ public class InventoryManager : MonoBehaviour
 
         foreach (Vector2Int cell in item.GetOccupiedCells(pos))
         {
-            grid[cell.x, cell.y] = item;
+            if (IsInside(cell))
+                grid[cell.x, cell.y] = item;
         }
     }
 
@@ -215,9 +207,20 @@ public class InventoryManager : MonoBehaviour
         grid = new InventoryItem[width, height];
 
         foreach (InventoryItem item in items)
-        {
             PlaceItem(item, item.position);
-        }
+    }
+
+    private bool IsInside(Vector2Int cell)
+    {
+        return cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height;
+    }
+
+    private bool IsInsideUnlocked(Vector2Int cell)
+    {
+        return cell.x >= 0 &&
+               cell.x < unlockedWidth &&
+               cell.y >= 0 &&
+               cell.y < unlockedHeight;
     }
 
     public bool IsOverCapacity()

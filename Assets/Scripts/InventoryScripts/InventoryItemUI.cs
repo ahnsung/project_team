@@ -2,7 +2,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventoryItemUI : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
+public class InventoryItemUI : MonoBehaviour,
+    IPointerDownHandler,
+    IPointerUpHandler,
+    IDragHandler,
+    IBeginDragHandler,
+    IEndDragHandler
 {
     public Image iconImage;
     public Image highlightImage;
@@ -10,12 +15,10 @@ public class InventoryItemUI : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     private InventoryItem item;
     private RectTransform rectTransform;
     private Canvas canvas;
+    private CanvasGroup canvasGroup;
 
-    private bool isPointerDown;
-    private bool isDragging;
-    private float pointerDownTime;
-
-    private const float holdTime = 0.3f;
+    private Vector2 originalAnchoredPosition;
+    private bool didDrag;
 
     public void Init(InventoryItem item, Canvas canvas)
     {
@@ -24,67 +27,67 @@ public class InventoryItemUI : MonoBehaviour, IPointerDownHandler, IPointerUpHan
 
         rectTransform = GetComponent<RectTransform>();
 
+        canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+
         if (iconImage != null)
-            iconImage.sprite = item.data.icon;
-
-        SetHighlight(false);
-    }
-
-    private void Update()
-    {
-        if (!isPointerDown) return;
-        if (isDragging) return;
-
-        if (Time.time - pointerDownTime >= holdTime)
         {
-            StartDragging();
+            iconImage.sprite = item.data.icon;
+            iconImage.raycastTarget = false;
+        }
+
+        if (highlightImage != null)
+        {
+            highlightImage.raycastTarget = false;
+            highlightImage.gameObject.SetActive(false);
         }
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        isPointerDown = true;
-        pointerDownTime = Time.time;
+        didDrag = false;
+        originalAnchoredPosition = rectTransform.anchoredPosition;
     }
 
-    public void OnPointerUp(PointerEventData eventData)
+    public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!isPointerDown) return;
+        didDrag = true;
 
-        isPointerDown = false;
+        InventoryUIManager.Instance.StartHoldItem(item, this);
 
-        if (isDragging)
-        {
-            EndDragging();
-        }
-        else
-        {
-            InventoryUIManager.Instance.SelectItem(item);
-        }
+        transform.SetAsLastSibling();
+
+        canvasGroup.blocksRaycasts = false;
+        canvasGroup.alpha = 0.75f;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!isDragging) return;
-
+        didDrag = true;
         rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
     }
 
-    private void StartDragging()
+    public void OnEndDrag(PointerEventData eventData)
     {
-        isDragging = true;
-        InventoryUIManager.Instance.StartHoldItem(item, this);
-        transform.SetAsLastSibling();
-    }
+        canvasGroup.blocksRaycasts = true;
+        canvasGroup.alpha = 1f;
 
-    private void EndDragging()
-    {
-        isDragging = false;
+        Vector2Int targetCell = InventoryUIManager.Instance.ScreenToCell(eventData.position);
 
-        Vector2Int targetCell = InventoryUIManager.Instance.CurrentHoverCell;
-        InventoryManager.Instance.TryMoveItem(item, targetCell);
+        bool success = InventoryManager.Instance.TryMoveItem(item, targetCell);
+
+        if (!success)
+            rectTransform.anchoredPosition = originalAnchoredPosition;
 
         InventoryUIManager.Instance.EndHoldItem();
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        if (didDrag) return;
+
+        InventoryUIManager.Instance.SelectItem(item);
     }
 
     public void SetHighlight(bool value)

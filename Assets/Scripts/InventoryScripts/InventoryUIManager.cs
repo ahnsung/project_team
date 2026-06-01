@@ -52,35 +52,17 @@ public class InventoryUIManager : MonoBehaviour
 
     private void Start()
     {
-        if (inventoryRoot != null)
-            inventoryRoot.SetActive(false);
+        inventoryRoot.SetActive(false);
+        infoPanel.SetActive(false);
+        dropPopup.SetActive(false);
+        noticePopup.SetActive(false);
 
-        if (infoPanel != null)
-            infoPanel.SetActive(false);
-
-        if (dropPopup != null)
-            dropPopup.SetActive(false);
-
-        if (noticePopup != null)
-            noticePopup.SetActive(false);
-
-        if (useButton != null)
-            useButton.onClick.AddListener(OnClickUse);
-
-        if (dropButton != null)
-            dropButton.onClick.AddListener(OnClickDrop);
-
-        if (closeInfoButton != null)
-            closeInfoButton.onClick.AddListener(CloseInfoPanel);
-
-        if (confirmDropButton != null)
-            confirmDropButton.onClick.AddListener(ConfirmDrop);
-
-        if (cancelDropButton != null)
-            cancelDropButton.onClick.AddListener(CancelDrop);
-
-        if (noticeConfirmButton != null)
-            noticeConfirmButton.onClick.AddListener(CloseNotice);
+        useButton.onClick.AddListener(OnClickUse);
+        dropButton.onClick.AddListener(OnClickDrop);
+        closeInfoButton.onClick.AddListener(CloseInfoPanel);
+        confirmDropButton.onClick.AddListener(ConfirmDrop);
+        cancelDropButton.onClick.AddListener(CancelDrop);
+        noticeConfirmButton.onClick.AddListener(CloseNotice);
 
         BuildSlots();
     }
@@ -97,15 +79,12 @@ public class InventoryUIManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.B))
         {
-            if (InventoryManager.Instance != null)
-                InventoryManager.Instance.AddTestBandage();
+            InventoryManager.Instance.AddTestBandage();
         }
     }
 
     public void OpenInventory()
     {
-        if (inventoryRoot == null) return;
-
         inventoryRoot.SetActive(true);
         state = InventoryState.Default;
         RefreshUI();
@@ -113,8 +92,7 @@ public class InventoryUIManager : MonoBehaviour
 
     public void CloseInventory()
     {
-        if (inventoryRoot != null)
-            inventoryRoot.SetActive(false);
+        inventoryRoot.SetActive(false);
 
         CloseInfoPanel();
         CloseDropPopup();
@@ -128,9 +106,6 @@ public class InventoryUIManager : MonoBehaviour
 
     private void BuildSlots()
     {
-        if (gridRoot == null || slotPrefab == null) return;
-        if (InventoryManager.Instance == null) return;
-
         for (int i = gridRoot.childCount - 1; i >= 0; i--)
             Destroy(gridRoot.GetChild(i).gameObject);
 
@@ -155,17 +130,13 @@ public class InventoryUIManager : MonoBehaviour
                 rt.anchoredPosition = new Vector2(startX + x * cellSize, startY - y * cellSize);
 
                 InventorySlotUI slot = slotObj.GetComponent<InventorySlotUI>();
-                if (slot != null)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    slot.Init(cell);
+                slot.Init(new Vector2Int(x, y));
 
-                    bool locked =
-                        x >= InventoryManager.Instance.unlockedWidth ||
-                        y >= InventoryManager.Instance.unlockedHeight;
+                bool locked =
+                    x >= InventoryManager.Instance.unlockedWidth ||
+                    y >= InventoryManager.Instance.unlockedHeight;
 
-                    slot.SetLocked(locked);
-                }
+                slot.SetLocked(locked);
             }
         }
     }
@@ -180,8 +151,6 @@ public class InventoryUIManager : MonoBehaviour
 
         itemUIs.Clear();
 
-        if (InventoryManager.Instance == null) return;
-
         foreach (InventoryItem item in InventoryManager.Instance.items)
             CreateItemUI(item);
 
@@ -193,8 +162,6 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CreateItemUI(InventoryItem item)
     {
-        if (gridRoot == null || itemPrefab == null || item == null) return;
-
         GameObject obj = Instantiate(itemPrefab, gridRoot);
         obj.name = "Item_" + item.data.itemName;
 
@@ -218,7 +185,6 @@ public class InventoryUIManager : MonoBehaviour
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-
         rt.sizeDelta = new Vector2((maxX + 1) * cellSize, (maxY + 1) * cellSize);
 
         rt.anchoredPosition = new Vector2(
@@ -227,58 +193,64 @@ public class InventoryUIManager : MonoBehaviour
         );
 
         InventoryItemUI itemUI = obj.GetComponent<InventoryItemUI>();
-        if (itemUI != null)
-        {
-            itemUI.Init(item, canvas);
-            itemUIs[item] = itemUI;
-        }
+        itemUI.Init(item, canvas);
+
+        itemUIs[item] = itemUI;
+    }
+
+    public Vector2Int ScreenToCell(Vector2 screenPosition)
+    {
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            gridRoot,
+            screenPosition,
+            canvas.worldCamera,
+            out Vector2 localPoint
+        );
+
+        int width = InventoryManager.Instance.width;
+        int height = InventoryManager.Instance.height;
+
+        float startX = -(width * cellSize) / 2f;
+        float startY = (height * cellSize) / 2f;
+
+        int x = Mathf.FloorToInt((localPoint.x - startX) / cellSize);
+        int y = Mathf.FloorToInt((startY - localPoint.y) / cellSize);
+
+        return new Vector2Int(x, y);
     }
 
     public void SelectItem(InventoryItem item)
     {
-        if (item == null) return;
         if (state == InventoryState.ItemHolding) return;
 
         selectedItem = item;
         state = InventoryState.ItemSelected;
 
         foreach (var pair in itemUIs)
-        {
-            if (pair.Value != null)
-                pair.Value.SetHighlight(pair.Key == item);
-        }
+            pair.Value.SetHighlight(pair.Key == item);
 
         UpdateInfoPanel();
-
-        if (infoPanel != null)
-            infoPanel.SetActive(true);
+        infoPanel.SetActive(true);
     }
 
     private void UpdateInfoPanel()
     {
         if (selectedItem == null) return;
 
-        if (itemNameText != null)
-            itemNameText.text = selectedItem.data.itemName;
+        itemNameText.text = selectedItem.data.itemName;
 
-        if (itemInfoText != null)
-        {
-            string categoryText = selectedItem.data.category.ToString();
-
-            itemInfoText.text =
-                "남은 사용횟수: " + selectedItem.remainUseCount + "\n" +
-                "[" + categoryText + "] 아이템\n" +
-                "버리기 가능: " + (selectedItem.data.canDrop ? "O" : "X") + "\n" +
-                "사용 시 턴 소모: " + (selectedItem.data.consumeTurnOnUse ? "O" : "X") + "\n" +
-                "효과: " + selectedItem.data.effectDescription;
-        }
+        itemInfoText.text =
+            "남은 사용횟수: " + selectedItem.remainUseCount + "\n" +
+            "[" + selectedItem.data.category + "] 아이템\n" +
+            "버리기 가능: " + (selectedItem.data.canDrop ? "O" : "X") + "\n" +
+            "사용 시 턴 소모: " + (selectedItem.data.consumeTurnOnUse ? "O" : "X") + "\n" +
+            "효과: " + selectedItem.data.effectDescription;
     }
 
     public void StartHoldItem(InventoryItem item, InventoryItemUI ui)
     {
         holdingItem = item;
         state = InventoryState.ItemHolding;
-
         CloseInfoPanel();
     }
 
@@ -296,10 +268,8 @@ public class InventoryUIManager : MonoBehaviour
     private void OnClickUse()
     {
         if (selectedItem == null) return;
-        if (InventoryManager.Instance == null) return;
 
         InventoryItem usedItem = selectedItem;
-
         InventoryManager.Instance.UseItem(usedItem);
 
         if (!InventoryManager.Instance.items.Contains(usedItem))
@@ -326,17 +296,13 @@ public class InventoryUIManager : MonoBehaviour
         }
 
         state = InventoryState.DropPopup;
-
-        if (dropPopup != null)
-            dropPopup.SetActive(true);
-
-        if (dropPopupText != null)
-            dropPopupText.text = "정말로 아이템을\n버리시겠습니까?";
+        dropPopup.SetActive(true);
+        dropPopupText.text = "정말로 아이템을\n버리시겠습니까?";
     }
 
     private void ConfirmDrop()
     {
-        if (selectedItem != null && InventoryManager.Instance != null)
+        if (selectedItem != null)
         {
             InventoryManager.Instance.RemoveItem(selectedItem);
             selectedItem = null;
@@ -344,7 +310,6 @@ public class InventoryUIManager : MonoBehaviour
 
         CloseDropPopup();
         CloseInfoPanel();
-
         state = InventoryState.Default;
     }
 
@@ -359,14 +324,10 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CloseInfoPanel()
     {
-        if (infoPanel != null)
-            infoPanel.SetActive(false);
+        infoPanel.SetActive(false);
 
         foreach (var pair in itemUIs)
-        {
-            if (pair.Value != null)
-                pair.Value.SetHighlight(false);
-        }
+            pair.Value.SetHighlight(false);
 
         if (state == InventoryState.ItemSelected)
             state = InventoryState.Default;
@@ -374,23 +335,18 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CloseDropPopup()
     {
-        if (dropPopup != null)
-            dropPopup.SetActive(false);
+        dropPopup.SetActive(false);
     }
 
     private void ShowNotice(string message)
     {
-        if (noticePopup != null)
-            noticePopup.SetActive(true);
-
-        if (noticeText != null)
-            noticeText.text = message;
+        noticePopup.SetActive(true);
+        noticeText.text = message;
     }
 
     private void CloseNotice()
     {
-        if (noticePopup != null)
-            noticePopup.SetActive(false);
+        noticePopup.SetActive(false);
 
         if (state != InventoryState.Closed)
             state = InventoryState.Default;

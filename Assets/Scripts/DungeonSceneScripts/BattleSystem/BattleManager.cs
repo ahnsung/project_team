@@ -48,6 +48,7 @@ public class BattleManager : MonoBehaviour
 
     private BattleState state = BattleState.None;
     private bool battleRunning = false;
+
     private readonly List<BattleUnit> enemies = new List<BattleUnit>();
 
     public bool IsBattleRunning()
@@ -238,9 +239,11 @@ public class BattleManager : MonoBehaviour
     private IEnumerator PlayerAttackRoutine(BattleUnit target)
     {
         state = BattleState.EnemyTurn;
+
         ClearEnemyArrows();
 
-        playerUnit.PlayAttackAnimation();
+        if (playerUnit != null)
+            playerUnit.PlayAttackAnimation();
 
         yield return new WaitForSeconds(attackStartDelay);
 
@@ -343,7 +346,6 @@ public class BattleManager : MonoBehaviour
 
         RemoveDeadEnemies();
 
-        // 전투 한 라운드 종료 → 던전 전체 턴 +1
         if (DungeonManager.Instance != null)
             DungeonManager.Instance.AddTurn("전투 라운드 종료");
         else
@@ -360,6 +362,7 @@ public class BattleManager : MonoBehaviour
         state = BattleState.EnemyTurn;
 
         int roll = Random.Range(0, 100);
+
         if (roll < runSuccessPercent)
         {
             yield return new WaitForSeconds(actionDelay);
@@ -406,6 +409,7 @@ public class BattleManager : MonoBehaviour
 
         state = BattleState.BattleEnd;
         ClearEnemyArrows();
+
         StartCoroutine(EndBattleRoutine());
     }
 
