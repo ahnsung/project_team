@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -18,7 +19,10 @@ public class InventoryItemUI : MonoBehaviour,
     private CanvasGroup canvasGroup;
 
     private Vector2 originalAnchoredPosition;
+    private int originalRotation;
     private bool didDrag;
+
+    private readonly List<GameObject> cellVisuals = new List<GameObject>();
 
     public void Init(InventoryItem item, Canvas canvas)
     {
@@ -32,15 +36,22 @@ public class InventoryItemUI : MonoBehaviour,
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
         if (iconImage != null)
-        {
-            iconImage.sprite = item.data.icon;
-            iconImage.raycastTarget = false;
-        }
+            iconImage.gameObject.SetActive(false);
 
         if (highlightImage != null)
-        {
-            highlightImage.raycastTarget = false;
             highlightImage.gameObject.SetActive(false);
+
+        RebuildShapeVisual();
+    }
+
+    private void Update()
+    {
+        if (!didDrag) return;
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            item.RotateClockwise();
+            RebuildShapeVisual();
         }
     }
 
@@ -48,6 +59,7 @@ public class InventoryItemUI : MonoBehaviour,
     {
         didDrag = false;
         originalAnchoredPosition = rectTransform.anchoredPosition;
+        originalRotation = item.rotation;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -78,7 +90,11 @@ public class InventoryItemUI : MonoBehaviour,
         bool success = InventoryManager.Instance.TryMoveItem(item, targetCell);
 
         if (!success)
+        {
+            item.SetRotation(originalRotation);
             rectTransform.anchoredPosition = originalAnchoredPosition;
+            RebuildShapeVisual();
+        }
 
         InventoryUIManager.Instance.EndHoldItem();
     }
@@ -90,9 +106,64 @@ public class InventoryItemUI : MonoBehaviour,
         InventoryUIManager.Instance.SelectItem(item);
     }
 
+    public void RebuildShapeVisual()
+    {
+        foreach (GameObject obj in cellVisuals)
+        {
+            if (obj != null)
+                Destroy(obj);
+        }
+
+        cellVisuals.Clear();
+
+        if (item == null) return;
+
+        float cellSize = InventoryUIManager.Instance.cellSize;
+        List<Vector2Int> shape = item.GetRotatedShape();
+        Vector2Int size = item.GetShapeSize();
+
+        rectTransform.sizeDelta = new Vector2(size.x * cellSize, size.y * cellSize);
+
+        float startX = -(size.x * cellSize) / 2f + cellSize / 2f;
+        float startY = (size.y * cellSize) / 2f - cellSize / 2f;
+
+        foreach (Vector2Int cell in shape)
+        {
+            GameObject cellObj = new GameObject("ItemCell_" + cell.x + "_" + cell.y);
+            cellObj.transform.SetParent(transform, false);
+
+            Image img = cellObj.AddComponent<Image>();
+            img.sprite = item.data.icon;
+            img.color = Color.white;
+            img.raycastTarget = false;
+
+            RectTransform rt = cellObj.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(cellSize - 6f, cellSize - 6f);
+            rt.anchoredPosition = new Vector2(
+                startX + cell.x * cellSize,
+                startY - cell.y * cellSize
+            );
+
+            Outline outline = cellObj.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            cellVisuals.Add(cellObj);
+        }
+    }
+
     public void SetHighlight(bool value)
     {
-        if (highlightImage != null)
-            highlightImage.gameObject.SetActive(value);
+        foreach (GameObject obj in cellVisuals)
+        {
+            if (obj == null) continue;
+
+            Image img = obj.GetComponent<Image>();
+            if (img != null)
+                img.color = value ? new Color(1f, 0.9f, 0.45f, 1f) : Color.white;
+        }
     }
 }

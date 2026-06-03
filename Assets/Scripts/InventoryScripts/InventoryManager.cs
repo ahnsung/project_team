@@ -28,10 +28,10 @@ public class InventoryManager : MonoBehaviour
         RefreshGrid();
     }
 
-    public void AddTestBandage()
-    {
-        AddItem(1001);
-    }
+    public void AddTestBandage() => AddItem(1001);
+    public void AddTestLongBandage() => AddItem(1002);
+    public void AddTestMedKit() => AddItem(1003);
+    public void AddTestScrap() => AddItem(1004);
 
     public bool AddItem(int itemId)
     {
@@ -57,7 +57,7 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        Debug.Log("인벤토리 초과 상태. 나중에 초과 칸 처리 필요.");
+        Debug.Log("인벤토리 초과 상태. 추후 초과 칸 처리 예정.");
         return false;
     }
 
@@ -66,12 +66,6 @@ public class InventoryManager : MonoBehaviour
         if (movingItem == null) return false;
 
         Vector2Int originalPos = movingItem.position;
-
-        if (!IsInsideUnlocked(targetPos))
-        {
-            InventoryUIManager.Instance.RefreshUI();
-            return false;
-        }
 
         RemoveFromGrid(movingItem);
 
@@ -152,16 +146,18 @@ public class InventoryManager : MonoBehaviour
         if (item == null) return;
 
         if (item.data.id == 1001)
-        {
             Debug.Log("붕대 사용: 체력 2 회복");
-        }
+
+        if (item.data.id == 1002)
+            Debug.Log("긴 붕대 사용: 체력 3 회복");
+
+        if (item.data.id == 1003)
+            Debug.Log("의료 키트 사용: 체력 크게 회복");
 
         item.remainUseCount--;
 
         if (item.data.consumeTurnOnUse)
-        {
             Debug.Log("아이템 사용으로 턴 +1");
-        }
 
         if (item.remainUseCount <= 0)
             RemoveItem(item);

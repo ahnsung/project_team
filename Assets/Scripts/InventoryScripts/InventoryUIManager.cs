@@ -78,9 +78,16 @@ public class InventoryUIManager : MonoBehaviour
         }
 
         if (Input.GetKeyDown(KeyCode.B))
-        {
             InventoryManager.Instance.AddTestBandage();
-        }
+
+        if (Input.GetKeyDown(KeyCode.N))
+            InventoryManager.Instance.AddTestLongBandage();
+
+        if (Input.GetKeyDown(KeyCode.M))
+            InventoryManager.Instance.AddTestMedKit();
+
+        if (Input.GetKeyDown(KeyCode.G))
+            InventoryManager.Instance.AddTestScrap();
     }
 
     public void OpenInventory()
@@ -173,23 +180,16 @@ public class InventoryUIManager : MonoBehaviour
         float startX = -(width * cellSize) / 2f + cellSize / 2f;
         float startY = (height * cellSize) / 2f - cellSize / 2f;
 
-        int maxX = 0;
-        int maxY = 0;
-
-        foreach (Vector2Int offset in item.data.shape)
-        {
-            if (offset.x > maxX) maxX = offset.x;
-            if (offset.y > maxY) maxY = offset.y;
-        }
+        Vector2Int shapeSize = item.GetShapeSize();
 
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2((maxX + 1) * cellSize, (maxY + 1) * cellSize);
+        rt.sizeDelta = new Vector2(shapeSize.x * cellSize, shapeSize.y * cellSize);
 
         rt.anchoredPosition = new Vector2(
-            startX + item.position.x * cellSize,
-            startY - item.position.y * cellSize
+            startX + item.position.x * cellSize + ((shapeSize.x - 1) * cellSize / 2f),
+            startY - item.position.y * cellSize - ((shapeSize.y - 1) * cellSize / 2f)
         );
 
         InventoryItemUI itemUI = obj.GetComponent<InventoryItemUI>();
@@ -244,6 +244,7 @@ public class InventoryUIManager : MonoBehaviour
             "[" + selectedItem.data.category + "] 아이템\n" +
             "버리기 가능: " + (selectedItem.data.canDrop ? "O" : "X") + "\n" +
             "사용 시 턴 소모: " + (selectedItem.data.consumeTurnOnUse ? "O" : "X") + "\n" +
+            "회전: R 키\n" +
             "효과: " + selectedItem.data.effectDescription;
     }
 

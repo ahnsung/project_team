@@ -2297,6 +2297,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bandageIcon: {fileID: 6309177368526343560, guid: 6f8a4d3afc3126747815744a428cc6df, type: 3}
+  longBandageIcon: {fileID: 0}
+  medKitIcon: {fileID: 0}
+  scrapIcon: {fileID: 0}
 --- !u!1 &590087849
 GameObject:
   m_ObjectHideFlags: 0
@@ -7517,6 +7520,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1422157341}
   m_CullTransparentMesh: 1
+--- !u!1 &1445667057
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1445667058}
+  m_Layer: 0
+  m_Name: ItemDataBase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1445667058
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1445667057}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 583.13153, y: 569.74854, z: 4.675741}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1446980065
 GameObject:
   m_ObjectHideFlags: 0
@@ -8714,6 +8748,7 @@ GameObject:
   - component: {fileID: 1836735079}
   - component: {fileID: 1836735080}
   - component: {fileID: 1836735081}
+  - component: {fileID: 1836735082}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -8829,10 +8864,9 @@ MonoBehaviour:
   attackPower: 10
   accuracy: 100
   evasion: 20
+  animator: {fileID: 0}
   hpBarFill: {fileID: 1074572326}
   targetArrow: {fileID: 0}
-  spriteRenderer: {fileID: 0}
-  spriteAnimator: {fileID: 0}
 --- !u!114 &1836735081
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8852,6 +8886,28 @@ MonoBehaviour:
   deadSprite: {fileID: 0}
   attackTime: 0.5
   hitTime: 0.5
+--- !u!95 &1836735082
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1836735076}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: db0ff7e466817d54cb4f5f23dcc75619, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1857149012
 GameObject:
   m_ObjectHideFlags: 0
@@ -10138,3 +10194,4 @@ SceneRoots:
   - {fileID: 818823549}
   - {fileID: 96857858}
   - {fileID: 2073417761}
+  - {fileID: 1445667058}
