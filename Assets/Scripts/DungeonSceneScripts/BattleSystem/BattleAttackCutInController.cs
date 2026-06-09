@@ -23,6 +23,10 @@ public class BattleAttackCutInController : MonoBehaviour
     public Image attackerShadow;
     public Image targetShadow;
 
+    [Header("Separated Sword Effect")]
+    public Image swordEffect;
+    public Vector2 swordEffectOffset = new Vector2(120f, 90f);
+
     [Header("Timing")]
     public float enterTime = 0.2f;
     public float hitMoveTime = 0.2f;
@@ -32,19 +36,26 @@ public class BattleAttackCutInController : MonoBehaviour
 
     [Header("Player Attack Positions")]
     public Vector2 attackerStart = new Vector2(-1200f, -60f);
-    public Vector2 attackerNear = new Vector2(-420f, -60f);
-    public Vector2 attackerHit = new Vector2(-180f, -60f);
+    public Vector2 attackerNear = new Vector2(-350f, -60f);
+    public Vector2 attackerHit = new Vector2(-350f, -60f);
     public Vector2 attackerEnd = new Vector2(-1200f, -60f);
 
     public Vector2 targetStart = new Vector2(1200f, -60f);
-    public Vector2 targetNear = new Vector2(420f, -60f);
-    public Vector2 targetHit = new Vector2(180f, -60f);
+    public Vector2 targetNear = new Vector2(350f, -60f);
+    public Vector2 targetHit = new Vector2(350f, -60f);
     public Vector2 targetEnd = new Vector2(1200f, -60f);
 
-    [Header("Shadow")]
+    [Header("Shadow Offset")]
     public Vector2 attackerShadowOffset = new Vector2(0f, -20f);
     public Vector2 targetShadowOffset = new Vector2(0f, -20f);
-    public Vector2 impactShadowMove = new Vector2(-80f, 0f);
+
+    [Header("Impact Shadow Move")]
+    public Vector2 attackerImpactShadowMove = new Vector2(-80f, 0f);
+    public Vector2 targetImpactShadowMove = new Vector2(80f, 0f);
+
+    [Header("Original Unit Restore Motion")]
+    public float originalUnitRestoreDistance = 0.5f;
+    public float originalUnitRestoreTime = 0.2f;
 
     [Header("Sound")]
     public AudioSource audioSource;
@@ -76,6 +87,9 @@ public class BattleAttackCutInController : MonoBehaviour
 
         SaveBackgroundOriginal();
 
+        Vector3 attackerOriginalPos = attacker.transform.position;
+        Vector3 targetOriginalPos = target.transform.position;
+
         effectRoot.SetActive(true);
 
         HideOriginalUnit(attacker, true);
@@ -99,18 +113,48 @@ public class BattleAttackCutInController : MonoBehaviour
 
         yield return MovePair(attackerHit, attackerEnd, targetHit, targetEnd, exitTime);
 
-        HideOriginalUnit(attacker, false);
-        HideOriginalUnit(target, false);
-
         StopSpeedLines();
         ClearBackgroundEffect();
-
-        yield return new WaitForSeconds(restoreTime);
 
         SetCutInActive(false);
         effectRoot.SetActive(false);
 
+        yield return RestoreOriginalUnits(attacker, target, attackerOriginalPos, targetOriginalPos);
+
         isPlaying = false;
+    }
+
+    private IEnumerator RestoreOriginalUnits(
+        BattleUnit attacker,
+        BattleUnit target,
+        Vector3 attackerOriginalPos,
+        Vector3 targetOriginalPos
+    )
+    {
+        Vector3 attackerRestoreStart = attackerOriginalPos + Vector3.right * originalUnitRestoreDistance;
+        Vector3 targetRestoreStart = targetOriginalPos + Vector3.left * originalUnitRestoreDistance;
+
+        attacker.transform.position = attackerRestoreStart;
+        target.transform.position = targetRestoreStart;
+
+        HideOriginalUnit(attacker, false);
+        HideOriginalUnit(target, false);
+
+        float t = 0f;
+
+        while (t < originalUnitRestoreTime)
+        {
+            t += Time.deltaTime;
+            float ratio = Mathf.Clamp01(t / originalUnitRestoreTime);
+
+            attacker.transform.position = Vector3.Lerp(attackerRestoreStart, attackerOriginalPos, ratio);
+            target.transform.position = Vector3.Lerp(targetRestoreStart, targetOriginalPos, ratio);
+
+            yield return null;
+        }
+
+        attacker.transform.position = attackerOriginalPos;
+        target.transform.position = targetOriginalPos;
     }
 
     private void SaveBackgroundOriginal()
@@ -137,7 +181,13 @@ public class BattleAttackCutInController : MonoBehaviour
         battleBackground.localRotation = originalBgRotation;
     }
 
-    private IEnumerator MovePair(Vector2 attackerFrom, Vector2 attackerTo, Vector2 targetFrom, Vector2 targetTo, float duration)
+    private IEnumerator MovePair(
+        Vector2 attackerFrom,
+        Vector2 attackerTo,
+        Vector2 targetFrom,
+        Vector2 targetTo,
+        float duration
+    )
     {
         float t = 0f;
 
@@ -171,9 +221,17 @@ public class BattleAttackCutInController : MonoBehaviour
 
             SetAnchored(cutInAttacker, attackerBase);
             SetAnchored(cutInTarget, targetBase);
+            SetAnchored(swordEffect, attackerBase + swordEffectOffset);
 
-            SetAnchored(attackerShadow, attackerBase + attackerShadowOffset + impactShadowMove * ratio);
-            SetAnchored(targetShadow, targetBase + targetShadowOffset + impactShadowMove * ratio);
+            SetAnchored(
+                attackerShadow,
+                attackerBase + attackerShadowOffset + attackerImpactShadowMove * ratio
+            );
+
+            SetAnchored(
+                targetShadow,
+                targetBase + targetShadowOffset + targetImpactShadowMove * ratio
+            );
 
             yield return null;
         }
@@ -183,6 +241,7 @@ public class BattleAttackCutInController : MonoBehaviour
     {
         SetAnchored(cutInAttacker, attackerPos);
         SetAnchored(attackerShadow, attackerPos + attackerShadowOffset);
+        SetAnchored(swordEffect, attackerPos + swordEffectOffset);
 
         SetAnchored(cutInTarget, targetPos);
         SetAnchored(targetShadow, targetPos + targetShadowOffset);
@@ -198,23 +257,39 @@ public class BattleAttackCutInController : MonoBehaviour
 
     private void SetCutInActive(bool value)
     {
-        if (cutInAttacker != null) cutInAttacker.gameObject.SetActive(value);
-        if (cutInTarget != null) cutInTarget.gameObject.SetActive(value);
-        if (attackerShadow != null) attackerShadow.gameObject.SetActive(value);
-        if (targetShadow != null) targetShadow.gameObject.SetActive(value);
+        if (cutInAttacker != null)
+            cutInAttacker.gameObject.SetActive(value);
+
+        if (cutInTarget != null)
+            cutInTarget.gameObject.SetActive(value);
+
+        if (attackerShadow != null)
+            attackerShadow.gameObject.SetActive(value);
+
+        if (targetShadow != null)
+            targetShadow.gameObject.SetActive(value);
+
+        if (swordEffect != null)
+            swordEffect.gameObject.SetActive(value);
     }
 
     private IEnumerator SpeedLineLoop()
     {
         while (true)
         {
-            if (speedLineA != null) speedLineA.SetActive(true);
-            if (speedLineB != null) speedLineB.SetActive(false);
+            if (speedLineA != null)
+                speedLineA.SetActive(true);
+
+            if (speedLineB != null)
+                speedLineB.SetActive(false);
 
             yield return new WaitForSeconds(speedLineInterval);
 
-            if (speedLineA != null) speedLineA.SetActive(false);
-            if (speedLineB != null) speedLineB.SetActive(true);
+            if (speedLineA != null)
+                speedLineA.SetActive(false);
+
+            if (speedLineB != null)
+                speedLineB.SetActive(true);
 
             yield return new WaitForSeconds(speedLineInterval);
         }
@@ -231,8 +306,11 @@ public class BattleAttackCutInController : MonoBehaviour
 
     private void HideSpeedLines()
     {
-        if (speedLineA != null) speedLineA.SetActive(false);
-        if (speedLineB != null) speedLineB.SetActive(false);
+        if (speedLineA != null)
+            speedLineA.SetActive(false);
+
+        if (speedLineB != null)
+            speedLineB.SetActive(false);
     }
 
     private void HideOriginalUnit(BattleUnit unit, bool hide)
