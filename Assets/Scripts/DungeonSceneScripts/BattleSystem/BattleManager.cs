@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class BattleManager : MonoBehaviour
 {
+    public static BattleManager Instance;
+
     private enum BattleState
     {
         None,
@@ -50,9 +52,19 @@ public class BattleManager : MonoBehaviour
 
     private readonly List<BattleUnit> enemies = new List<BattleUnit>();
 
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     public bool IsBattleRunning()
     {
         return battleRunning;
+    }
+
+    public bool CanPlayerUseItem()
+    {
+        return battleRunning && state == BattleState.PlayerTurn;
     }
 
     private void Start()
@@ -235,6 +247,41 @@ public class BattleManager : MonoBehaviour
         StartCoroutine(PlayerAttackRoutine(enemy));
     }
 
+    public void OnPlayerUsedItem()
+    {
+        if (!battleRunning)
+            return;
+
+        if (state != BattleState.PlayerTurn)
+            return;
+
+        StartCoroutine(PlayerUseItemRoutine());
+    }
+
+    private IEnumerator PlayerUseItemRoutine()
+    {
+        state = BattleState.EnemyTurn;
+
+        if (uiManager != null)
+            uiManager.HideBattleUI();
+
+        yield return StartCoroutine(EnemyTurnRoutine(false));
+
+        if (DungeonManager.Instance != null)
+            DungeonManager.Instance.AddTurn("아이템 사용");
+
+        if (battleRunning && state != BattleState.BattleEnd)
+        {
+            state = BattleState.PlayerTurn;
+
+            if (uiManager != null)
+            {
+                uiManager.ShowBattleUI();
+                uiManager.ShowMainBattleMenu();
+            }
+        }
+    }
+
     private IEnumerator PlayerAttackRoutine(BattleUnit target)
     {
         state = BattleState.EnemyTurn;
@@ -248,9 +295,7 @@ public class BattleManager : MonoBehaviour
         bool hit = Random.Range(0, 100) < playerAccuracy;
 
         if (cutInController != null)
-        {
             yield return cutInController.PlayPlayerAttackCutIn(playerUnit, target);
-        }
         else
         {
             playerUnit.PlayAttackAnimation();
@@ -284,10 +329,10 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        yield return StartCoroutine(EnemyTurnRoutine());
+        yield return StartCoroutine(EnemyTurnRoutine(true));
     }
 
-    private IEnumerator EnemyTurnRoutine()
+    private IEnumerator EnemyTurnRoutine(bool addTurnAtEnd)
     {
         state = BattleState.EnemyTurn;
 
@@ -312,11 +357,10 @@ public class BattleManager : MonoBehaviour
             {
                 int damage = enemy.attackPower;
 
-                if (PlayerResourceManager.Instance != null)
+                if (PlayerResourceManager.Instance != null &&
+                    PlayerResourceManager.Instance.IsHungerAllDecreasePenaltyActive())
                 {
-                    // 배고픔 25% 이하 패널티: 모든 자원 감소량/피해량 50% 증가
-                    if (PlayerResourceManager.Instance.IsHungerAllDecreasePenaltyActive())
-                        damage = Mathf.RoundToInt(damage * 1.5f);
+                    damage = Mathf.RoundToInt(damage * 1.5f);
                 }
 
                 playerUnit.TakeDamage(damage);
@@ -342,13 +386,19 @@ public class BattleManager : MonoBehaviour
 
         RemoveDeadEnemies();
 
-        if (DungeonManager.Instance != null)
+        if (addTurnAtEnd && DungeonManager.Instance != null)
             DungeonManager.Instance.AddTurn("전투 라운드 종료");
 
-        if (uiManager != null)
-            uiManager.ShowMainBattleMenu();
+        if (battleRunning && state != BattleState.BattleEnd)
+        {
+            state = BattleState.PlayerTurn;
 
-        state = BattleState.PlayerTurn;
+            if (uiManager != null)
+            {
+                uiManager.ShowBattleUI();
+                uiManager.ShowMainBattleMenu();
+            }
+        }
     }
 
     private IEnumerator RunRoutine()
@@ -373,7 +423,7 @@ public class BattleManager : MonoBehaviour
         else
         {
             yield return new WaitForSeconds(actionDelay);
-            yield return StartCoroutine(EnemyTurnRoutine());
+            yield return StartCoroutine(EnemyTurnRoutine(true));
         }
     }
 

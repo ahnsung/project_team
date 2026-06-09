@@ -11,6 +11,9 @@ public class InventoryUIManager : MonoBehaviour
     public GameObject inventoryRoot;
     public Canvas canvas;
 
+    [Header("Window Buttons")]
+    public Button closeButton;
+
     [Header("Grid")]
     public RectTransform gridRoot;
     public GameObject slotPrefab;
@@ -41,7 +44,8 @@ public class InventoryUIManager : MonoBehaviour
     private InventoryItem selectedItem;
     private InventoryItem holdingItem;
 
-    private readonly Dictionary<InventoryItem, InventoryItemUI> itemUIs = new Dictionary<InventoryItem, InventoryItemUI>();
+    private readonly Dictionary<InventoryItem, InventoryItemUI> itemUIs =
+        new Dictionary<InventoryItem, InventoryItemUI>();
 
     public Vector2Int CurrentHoverCell { get; private set; }
 
@@ -52,30 +56,71 @@ public class InventoryUIManager : MonoBehaviour
 
     private void Start()
     {
-        inventoryRoot.SetActive(false);
-        infoPanel.SetActive(false);
-        dropPopup.SetActive(false);
-        noticePopup.SetActive(false);
+        if (inventoryRoot != null)
+            inventoryRoot.SetActive(false);
 
-        useButton.onClick.AddListener(OnClickUse);
-        dropButton.onClick.AddListener(OnClickDrop);
-        closeInfoButton.onClick.AddListener(CloseInfoPanel);
-        confirmDropButton.onClick.AddListener(ConfirmDrop);
-        cancelDropButton.onClick.AddListener(CancelDrop);
-        noticeConfirmButton.onClick.AddListener(CloseNotice);
+        if (infoPanel != null)
+            infoPanel.SetActive(false);
 
+        if (dropPopup != null)
+            dropPopup.SetActive(false);
+
+        if (noticePopup != null)
+            noticePopup.SetActive(false);
+
+        BindButtons();
         BuildSlots();
+    }
+
+    private void BindButtons()
+    {
+        if (useButton != null)
+        {
+            useButton.onClick.RemoveAllListeners();
+            useButton.onClick.AddListener(OnClickUse);
+        }
+
+        if (dropButton != null)
+        {
+            dropButton.onClick.RemoveAllListeners();
+            dropButton.onClick.AddListener(OnClickDrop);
+        }
+
+        if (closeInfoButton != null)
+        {
+            closeInfoButton.onClick.RemoveAllListeners();
+            closeInfoButton.onClick.AddListener(CloseInfoPanel);
+        }
+
+        if (confirmDropButton != null)
+        {
+            confirmDropButton.onClick.RemoveAllListeners();
+            confirmDropButton.onClick.AddListener(ConfirmDrop);
+        }
+
+        if (cancelDropButton != null)
+        {
+            cancelDropButton.onClick.RemoveAllListeners();
+            cancelDropButton.onClick.AddListener(CancelDrop);
+        }
+
+        if (noticeConfirmButton != null)
+        {
+            noticeConfirmButton.onClick.RemoveAllListeners();
+            noticeConfirmButton.onClick.AddListener(CloseNotice);
+        }
+
+        if (closeButton != null)
+        {
+            closeButton.onClick.RemoveAllListeners();
+            closeButton.onClick.AddListener(OnClickCloseButton);
+        }
     }
 
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.I))
-        {
-            if (state == InventoryState.Closed)
-                OpenInventory();
-            else
-                CloseInventory();
-        }
+            ToggleInventory();
 
         if (Input.GetKeyDown(KeyCode.B))
             InventoryManager.Instance.AddTestBandage();
@@ -90,8 +135,30 @@ public class InventoryUIManager : MonoBehaviour
             InventoryManager.Instance.AddTestScrap();
     }
 
+    public void ToggleInventory()
+    {
+        if (inventoryRoot == null) return;
+
+        if (inventoryRoot.activeSelf)
+            CloseInventory();
+        else
+            OpenInventory();
+    }
+
+    public void OnClickInventoryButton()
+    {
+        ToggleInventory();
+    }
+
+    public void OnClickCloseButton()
+    {
+        CloseInventory();
+    }
+
     public void OpenInventory()
     {
+        if (inventoryRoot == null) return;
+
         inventoryRoot.SetActive(true);
         state = InventoryState.Default;
         RefreshUI();
@@ -99,7 +166,8 @@ public class InventoryUIManager : MonoBehaviour
 
     public void CloseInventory()
     {
-        inventoryRoot.SetActive(false);
+        if (inventoryRoot != null)
+            inventoryRoot.SetActive(false);
 
         CloseInfoPanel();
         CloseDropPopup();
@@ -113,6 +181,9 @@ public class InventoryUIManager : MonoBehaviour
 
     private void BuildSlots()
     {
+        if (gridRoot == null || slotPrefab == null) return;
+        if (InventoryManager.Instance == null) return;
+
         for (int i = gridRoot.childCount - 1; i >= 0; i--)
             Destroy(gridRoot.GetChild(i).gameObject);
 
@@ -137,13 +208,17 @@ public class InventoryUIManager : MonoBehaviour
                 rt.anchoredPosition = new Vector2(startX + x * cellSize, startY - y * cellSize);
 
                 InventorySlotUI slot = slotObj.GetComponent<InventorySlotUI>();
-                slot.Init(new Vector2Int(x, y));
 
-                bool locked =
-                    x >= InventoryManager.Instance.unlockedWidth ||
-                    y >= InventoryManager.Instance.unlockedHeight;
+                if (slot != null)
+                {
+                    slot.Init(new Vector2Int(x, y));
 
-                slot.SetLocked(locked);
+                    bool locked =
+                        x >= InventoryManager.Instance.unlockedWidth ||
+                        y >= InventoryManager.Instance.unlockedHeight;
+
+                    slot.SetLocked(locked);
+                }
             }
         }
     }
@@ -158,6 +233,8 @@ public class InventoryUIManager : MonoBehaviour
 
         itemUIs.Clear();
 
+        if (InventoryManager.Instance == null) return;
+
         foreach (InventoryItem item in InventoryManager.Instance.items)
             CreateItemUI(item);
 
@@ -169,6 +246,8 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CreateItemUI(InventoryItem item)
     {
+        if (itemPrefab == null || gridRoot == null) return;
+
         GameObject obj = Instantiate(itemPrefab, gridRoot);
         obj.name = "Item_" + item.data.itemName;
 
@@ -193,9 +272,12 @@ public class InventoryUIManager : MonoBehaviour
         );
 
         InventoryItemUI itemUI = obj.GetComponent<InventoryItemUI>();
-        itemUI.Init(item, canvas);
 
-        itemUIs[item] = itemUI;
+        if (itemUI != null)
+        {
+            itemUI.Init(item, canvas);
+            itemUIs[item] = itemUI;
+        }
     }
 
     public Vector2Int ScreenToCell(Vector2 screenPosition)
@@ -203,7 +285,7 @@ public class InventoryUIManager : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             gridRoot,
             screenPosition,
-            canvas.worldCamera,
+            canvas != null ? canvas.worldCamera : null,
             out Vector2 localPoint
         );
 
@@ -227,25 +309,34 @@ public class InventoryUIManager : MonoBehaviour
         state = InventoryState.ItemSelected;
 
         foreach (var pair in itemUIs)
-            pair.Value.SetHighlight(pair.Key == item);
+        {
+            if (pair.Value != null)
+                pair.Value.SetHighlight(pair.Key == item);
+        }
 
         UpdateInfoPanel();
-        infoPanel.SetActive(true);
+
+        if (infoPanel != null)
+            infoPanel.SetActive(true);
     }
 
     private void UpdateInfoPanel()
     {
         if (selectedItem == null) return;
 
-        itemNameText.text = selectedItem.data.itemName;
+        if (itemNameText != null)
+            itemNameText.text = selectedItem.data.itemName;
 
-        itemInfoText.text =
-            "남은 사용횟수: " + selectedItem.remainUseCount + "\n" +
-            "[" + selectedItem.data.category + "] 아이템\n" +
-            "버리기 가능: " + (selectedItem.data.canDrop ? "O" : "X") + "\n" +
-            "사용 시 턴 소모: " + (selectedItem.data.consumeTurnOnUse ? "O" : "X") + "\n" +
-            "회전: R 키\n" +
-            "효과: " + selectedItem.data.effectDescription;
+        if (itemInfoText != null)
+        {
+            itemInfoText.text =
+                "남은 사용횟수: " + selectedItem.remainUseCount + "\n" +
+                "[" + selectedItem.data.category + "] 아이템\n" +
+                "버리기 가능: " + (selectedItem.data.canDrop ? "O" : "X") + "\n" +
+                "사용 시 턴 소모: " + (selectedItem.data.consumeTurnOnUse ? "O" : "X") + "\n" +
+                "회전: R 키\n" +
+                "효과: " + selectedItem.data.effectDescription;
+        }
     }
 
     public void StartHoldItem(InventoryItem item, InventoryItemUI ui)
@@ -270,19 +361,21 @@ public class InventoryUIManager : MonoBehaviour
     {
         if (selectedItem == null) return;
 
+        if (BattleManager.Instance != null &&
+            BattleManager.Instance.IsBattleRunning() &&
+            !BattleManager.Instance.CanPlayerUseItem())
+        {
+            ShowNotice("지금은 플레이어 턴이 아니라\n아이템을 사용할 수 없습니다.");
+            return;
+        }
+
         InventoryItem usedItem = selectedItem;
+
         InventoryManager.Instance.UseItem(usedItem);
 
-        if (!InventoryManager.Instance.items.Contains(usedItem))
-        {
-            selectedItem = null;
-            CloseInfoPanel();
-        }
-        else
-        {
-            selectedItem = usedItem;
-            UpdateInfoPanel();
-        }
+        selectedItem = null;
+        CloseInfoPanel();
+        RefreshUI();
     }
 
     private void OnClickDrop()
@@ -297,8 +390,12 @@ public class InventoryUIManager : MonoBehaviour
         }
 
         state = InventoryState.DropPopup;
-        dropPopup.SetActive(true);
-        dropPopupText.text = "정말로 아이템을\n버리시겠습니까?";
+
+        if (dropPopup != null)
+            dropPopup.SetActive(true);
+
+        if (dropPopupText != null)
+            dropPopupText.text = "정말로 아이템을\n버리시겠습니까?";
     }
 
     private void ConfirmDrop()
@@ -325,10 +422,14 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CloseInfoPanel()
     {
-        infoPanel.SetActive(false);
+        if (infoPanel != null)
+            infoPanel.SetActive(false);
 
         foreach (var pair in itemUIs)
-            pair.Value.SetHighlight(false);
+        {
+            if (pair.Value != null)
+                pair.Value.SetHighlight(false);
+        }
 
         if (state == InventoryState.ItemSelected)
             state = InventoryState.Default;
@@ -336,18 +437,23 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CloseDropPopup()
     {
-        dropPopup.SetActive(false);
+        if (dropPopup != null)
+            dropPopup.SetActive(false);
     }
 
     private void ShowNotice(string message)
     {
-        noticePopup.SetActive(true);
-        noticeText.text = message;
+        if (noticePopup != null)
+            noticePopup.SetActive(true);
+
+        if (noticeText != null)
+            noticeText.text = message;
     }
 
     private void CloseNotice()
     {
-        noticePopup.SetActive(false);
+        if (noticePopup != null)
+            noticePopup.SetActive(false);
 
         if (state != InventoryState.Closed)
             state = InventoryState.Default;

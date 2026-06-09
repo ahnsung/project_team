@@ -63,7 +63,9 @@ public class InventoryManager : MonoBehaviour
                     items.Add(newItem);
                     PlaceItem(newItem, pos);
 
-                    InventoryUIManager.Instance.RefreshUI();
+                    if (InventoryUIManager.Instance != null)
+                        InventoryUIManager.Instance.RefreshUI();
+
                     return true;
                 }
             }
@@ -88,7 +90,10 @@ public class InventoryManager : MonoBehaviour
             if (CanPlaceItem(movingItem, targetPos, null))
             {
                 PlaceItem(movingItem, targetPos);
-                InventoryUIManager.Instance.RefreshUI();
+
+                if (InventoryUIManager.Instance != null)
+                    InventoryUIManager.Instance.RefreshUI();
+
                 return true;
             }
         }
@@ -107,7 +112,9 @@ public class InventoryManager : MonoBehaviour
                 PlaceItem(movingItem, targetPos);
                 PlaceItem(swapItem, originalPos);
 
-                InventoryUIManager.Instance.RefreshUI();
+                if (InventoryUIManager.Instance != null)
+                    InventoryUIManager.Instance.RefreshUI();
+
                 return true;
             }
 
@@ -115,7 +122,10 @@ public class InventoryManager : MonoBehaviour
         }
 
         PlaceItem(movingItem, originalPos);
-        InventoryUIManager.Instance.RefreshUI();
+
+        if (InventoryUIManager.Instance != null)
+            InventoryUIManager.Instance.RefreshUI();
+
         return false;
     }
 
@@ -157,33 +167,49 @@ public class InventoryManager : MonoBehaviour
     {
         if (item == null) return;
 
-        if (PlayerResourceManager.Instance != null)
+        if (BattleManager.Instance != null &&
+            BattleManager.Instance.IsBattleRunning() &&
+            !BattleManager.Instance.CanPlayerUseItem())
         {
-            if (item.data.id == 1001)
-                PlayerResourceManager.Instance.HealHealthItem(10);
-
-            else if (item.data.id == 1004)
-                PlayerResourceManager.Instance.HealHungerItem(10);
-
-            else if (item.data.id == 1007)
-                PlayerResourceManager.Instance.HealMentalItem(10);
-
-            else if (item.data.id == 1002)
-                PlayerResourceManager.Instance.HealHealthItem(10);
-
-            else if (item.data.id == 1003)
-                PlayerResourceManager.Instance.HealHealthItem(10);
+            Debug.Log("지금은 플레이어 턴이 아니라 아이템을 사용할 수 없습니다.");
+            return;
         }
+
+        ApplyItemEffect(item);
 
         item.remainUseCount--;
 
-        if (item.data.consumeTurnOnUse && DungeonManager.Instance != null)
-            DungeonManager.Instance.AddTurn("아이템 사용");
-
         if (item.remainUseCount <= 0)
             RemoveItem(item);
+        else if (InventoryUIManager.Instance != null)
+            InventoryUIManager.Instance.RefreshUI();
 
-        InventoryUIManager.Instance.RefreshUI();
+        if (BattleManager.Instance != null && BattleManager.Instance.IsBattleRunning())
+        {
+            BattleManager.Instance.OnPlayerUsedItem();
+        }
+        else
+        {
+            if (DungeonManager.Instance != null)
+                DungeonManager.Instance.AddTurn("아이템 사용");
+        }
+    }
+
+    private void ApplyItemEffect(InventoryItem item)
+    {
+        if (item == null) return;
+        if (PlayerResourceManager.Instance == null) return;
+
+        if (item.data.id == 1001)
+            PlayerResourceManager.Instance.HealHealthItem(10);
+        else if (item.data.id == 1004)
+            PlayerResourceManager.Instance.HealHungerItem(10);
+        else if (item.data.id == 1007)
+            PlayerResourceManager.Instance.HealMentalItem(10);
+        else if (item.data.id == 1002)
+            PlayerResourceManager.Instance.HealHealthItem(10);
+        else if (item.data.id == 1003)
+            PlayerResourceManager.Instance.HealHealthItem(10);
     }
 
     public void RemoveItem(InventoryItem item)
@@ -193,7 +219,8 @@ public class InventoryManager : MonoBehaviour
         RemoveFromGrid(item);
         items.Remove(item);
 
-        InventoryUIManager.Instance.RefreshUI();
+        if (InventoryUIManager.Instance != null)
+            InventoryUIManager.Instance.RefreshUI();
     }
 
     private void PlaceItem(InventoryItem item, Vector2Int pos)
