@@ -2,28 +2,50 @@ using UnityEngine;
 
 public class BattleUIManager : MonoBehaviour
 {
-    [Header("Panels")]
+    [Header("Always On")]
     public GameObject battleRoot;
+    public GameObject middleMenuPanel;
+
+    [Header("Battle Only")]
+    public GameObject encounterPanel;
     public GameObject battleMenuPanel;
     public GameObject actionMenuPanel;
 
     private void Awake()
     {
+        KeepAlwaysUIOn();
         HideBattleUI();
     }
 
-    public void ShowBattleUI()
+    private void KeepAlwaysUIOn()
     {
         if (battleRoot != null)
             battleRoot.SetActive(true);
 
-        ShowMainBattleMenu();
+        if (middleMenuPanel != null)
+            middleMenuPanel.SetActive(true);
+    }
+
+    public void ShowBattleUI()
+    {
+        KeepAlwaysUIOn();
+
+        if (encounterPanel != null)
+            encounterPanel.SetActive(true);
+
+        if (battleMenuPanel != null)
+            battleMenuPanel.SetActive(true);
+
+        if (actionMenuPanel != null)
+            actionMenuPanel.SetActive(false);
     }
 
     public void HideBattleUI()
     {
-        if (battleRoot != null)
-            battleRoot.SetActive(false);
+        KeepAlwaysUIOn();
+
+        if (encounterPanel != null)
+            encounterPanel.SetActive(false);
 
         if (battleMenuPanel != null)
             battleMenuPanel.SetActive(false);
@@ -34,8 +56,7 @@ public class BattleUIManager : MonoBehaviour
 
     public void ShowMainBattleMenu()
     {
-        if (battleRoot != null)
-            battleRoot.SetActive(true);
+        KeepAlwaysUIOn();
 
         if (battleMenuPanel != null)
             battleMenuPanel.SetActive(true);
@@ -46,8 +67,7 @@ public class BattleUIManager : MonoBehaviour
 
     public void ShowActionMenu()
     {
-        if (battleRoot != null)
-            battleRoot.SetActive(true);
+        KeepAlwaysUIOn();
 
         if (battleMenuPanel != null)
             battleMenuPanel.SetActive(false);

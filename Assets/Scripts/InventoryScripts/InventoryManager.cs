@@ -7,11 +7,11 @@ public class InventoryManager : MonoBehaviour
 
     [Header("Inventory Size")]
     public int width = 8;
-    public int height = 5;
+    public int height = 8;
 
     [Header("Unlocked Area")]
     public int unlockedWidth = 8;
-    public int unlockedHeight = 4;
+    public int unlockedHeight = 1;
 
     public List<InventoryItem> items = new List<InventoryItem>();
 

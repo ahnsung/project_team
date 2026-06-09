@@ -5,14 +5,15 @@ using UnityEngine.UI;
 public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler
 {
     public Vector2Int cellPosition;
-    public Image background;
 
-    private Color normalColor = new Color(0.06f, 0.06f, 0.06f, 1f);
-    private Color lockedColor = new Color(0.08f, 0.12f, 0.18f, 1f);
+    [SerializeField] private Image background;
 
     public void Init(Vector2Int pos)
     {
         cellPosition = pos;
+
+        if (background == null)
+            background = GetComponent<Image>();
     }
 
     public void SetLocked(bool locked)
@@ -23,14 +24,15 @@ public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler
         if (background == null) return;
 
         background.sprite = null;
-        background.color = locked ? lockedColor : normalColor;
+        background.raycastTarget = true;
+
+        background.color = locked
+            ? new Color(0f, 0f, 0f, 0.25f)
+            : new Color(0f, 0f, 0f, 0f);
 
         Outline outline = GetComponent<Outline>();
-        if (outline == null)
-            outline = gameObject.AddComponent<Outline>();
-
-        outline.effectColor = new Color(0.45f, 0.65f, 0.65f, 0.9f);
-        outline.effectDistance = new Vector2(1.5f, -1.5f);
+        if (outline != null)
+            Destroy(outline);
     }
 
     public void OnPointerEnter(PointerEventData eventData)

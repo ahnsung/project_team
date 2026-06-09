@@ -16,7 +16,7 @@ public class PlayerStats : MonoBehaviour
     public int MaxHealth => 50 + CON * 10;
     public int MaxHunger => 100 + CON * 5;
     public int MaxMental => 50 + INT * 5;
-    public int InventoryCapacity => 25 + STR * 5;
+    public int InventoryCapacity => 32;
 
     private const string STR_KEY = "STAT_STR";
     private const string DEX_KEY = "STAT_DEX";

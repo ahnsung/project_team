@@ -18,7 +18,11 @@ public class InventoryUIManager : MonoBehaviour
     public RectTransform gridRoot;
     public GameObject slotPrefab;
     public GameObject itemPrefab;
-    public float cellSize = 64f;
+
+    [Header("Grid Calibration")]
+    public float cellSize = 48f;
+    public float cellGap = 0f;
+    public Vector2 gridOffset = Vector2.zero;
 
     [Header("Info Panel")]
     public GameObject infoPanel;
@@ -40,7 +44,6 @@ public class InventoryUIManager : MonoBehaviour
     public Button noticeConfirmButton;
 
     private InventoryState state = InventoryState.Closed;
-
     private InventoryItem selectedItem;
     private InventoryItem holdingItem;
 
@@ -48,6 +51,8 @@ public class InventoryUIManager : MonoBehaviour
         new Dictionary<InventoryItem, InventoryItemUI>();
 
     public Vector2Int CurrentHoverCell { get; private set; }
+
+    private float Step => cellSize + cellGap;
 
     private void Awake()
     {
@@ -122,6 +127,8 @@ public class InventoryUIManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.I))
             ToggleInventory();
 
+        if (InventoryManager.Instance == null) return;
+
         if (Input.GetKeyDown(KeyCode.B))
             InventoryManager.Instance.AddTestBandage();
 
@@ -190,9 +197,6 @@ public class InventoryUIManager : MonoBehaviour
         int width = InventoryManager.Instance.width;
         int height = InventoryManager.Instance.height;
 
-        float startX = -(width * cellSize) / 2f + cellSize / 2f;
-        float startY = (height * cellSize) / 2f - cellSize / 2f;
-
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -205,7 +209,20 @@ public class InventoryUIManager : MonoBehaviour
                 rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellSize, cellSize);
-                rt.anchoredPosition = new Vector2(startX + x * cellSize, startY - y * cellSize);
+                rt.anchoredPosition = CellToLocalPosition(new Vector2Int(x, y));
+
+                Image img = slotObj.GetComponent<Image>();
+                if (img != null)
+                {
+                    Color c = img.color;
+                    c.a = 0f;
+                    img.color = c;
+                    img.raycastTarget = true;
+                }
+
+                Outline outline = slotObj.GetComponent<Outline>();
+                if (outline != null)
+                    Destroy(outline);
 
                 InventorySlotUI slot = slotObj.GetComponent<InventorySlotUI>();
 
@@ -253,22 +270,21 @@ public class InventoryUIManager : MonoBehaviour
 
         RectTransform rt = obj.GetComponent<RectTransform>();
 
-        int width = InventoryManager.Instance.width;
-        int height = InventoryManager.Instance.height;
-
-        float startX = -(width * cellSize) / 2f + cellSize / 2f;
-        float startY = (height * cellSize) / 2f - cellSize / 2f;
-
         Vector2Int shapeSize = item.GetShapeSize();
 
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(shapeSize.x * cellSize, shapeSize.y * cellSize);
+        rt.sizeDelta = new Vector2(
+            shapeSize.x * cellSize + (shapeSize.x - 1) * cellGap,
+            shapeSize.y * cellSize + (shapeSize.y - 1) * cellGap
+        );
+
+        Vector2 baseCellPos = CellToLocalPosition(item.position);
 
         rt.anchoredPosition = new Vector2(
-            startX + item.position.x * cellSize + ((shapeSize.x - 1) * cellSize / 2f),
-            startY - item.position.y * cellSize - ((shapeSize.y - 1) * cellSize / 2f)
+            baseCellPos.x + ((shapeSize.x - 1) * Step / 2f),
+            baseCellPos.y - ((shapeSize.y - 1) * Step / 2f)
         );
 
         InventoryItemUI itemUI = obj.GetComponent<InventoryItemUI>();
@@ -280,6 +296,19 @@ public class InventoryUIManager : MonoBehaviour
         }
     }
 
+    private Vector2 CellToLocalPosition(Vector2Int cell)
+    {
+        if (gridRoot == null)
+            return Vector2.zero;
+
+        Rect rect = gridRoot.rect;
+
+        float x = rect.xMin + gridOffset.x + cellSize / 2f + cell.x * Step;
+        float y = rect.yMax + gridOffset.y - cellSize / 2f - cell.y * Step;
+
+        return new Vector2(x, y);
+    }
+
     public Vector2Int ScreenToCell(Vector2 screenPosition)
     {
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -289,14 +318,16 @@ public class InventoryUIManager : MonoBehaviour
             out Vector2 localPoint
         );
 
-        int width = InventoryManager.Instance.width;
-        int height = InventoryManager.Instance.height;
+        if (InventoryManager.Instance == null)
+            return new Vector2Int(-1, -1);
 
-        float startX = -(width * cellSize) / 2f;
-        float startY = (height * cellSize) / 2f;
+        Rect rect = gridRoot.rect;
 
-        int x = Mathf.FloorToInt((localPoint.x - startX) / cellSize);
-        int y = Mathf.FloorToInt((startY - localPoint.y) / cellSize);
+        float startX = rect.xMin + gridOffset.x;
+        float startY = rect.yMax + gridOffset.y;
+
+        int x = Mathf.FloorToInt((localPoint.x - startX) / Step);
+        int y = Mathf.FloorToInt((startY - localPoint.y) / Step);
 
         return new Vector2Int(x, y);
     }
