@@ -14,8 +14,8 @@ public class BattleManager : MonoBehaviour
         BattleEnd
     }
 
-    [Header("Camera")]
-    public BattleCameraController battleCamera;
+    [Header("Cut In")]
+    public BattleAttackCutInController cutInController;
 
     [Header("Player")]
     public BattleUnit playerUnit;
@@ -38,9 +38,8 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Timing")]
     public float encounterMessageTime = 1f;
-    public float attackStartDelay = 0.12f;
-    public float hitApplyDelay = 0.07f;
-    public float afterHitDelay = 0.45f;
+    public float enemyAttackDelay = 0.6f;
+    public float afterHitDelay = 0.2f;
     public float actionDelay = 0.6f;
 
     [Header("Battle Setting")]
@@ -142,13 +141,7 @@ public class BattleManager : MonoBehaviour
             if (unit == null)
                 unit = enemyObj.AddComponent<BattleUnit>();
 
-            unit.Setup(
-                data.monsterName,
-                data.maxHP,
-                data.attackPower,
-                data.accuracy,
-                data.evasion
-            );
+            unit.Setup(data.monsterName, data.maxHP, data.attackPower, data.accuracy, data.evasion);
 
             BattleEnemyClick click = enemyObj.GetComponent<BattleEnemyClick>();
 
@@ -242,23 +235,15 @@ public class BattleManager : MonoBehaviour
 
         ClearEnemyArrows();
 
-        if (playerUnit != null)
-            playerUnit.PlayAttackAnimation();
-
-        yield return new WaitForSeconds(attackStartDelay);
-
         bool hit = RollHit(playerUnit.accuracy, target.evasion);
 
-        Coroutine cameraRoutine = null;
-
-        if (battleCamera != null)
+        if (cutInController != null)
+            yield return cutInController.PlayPlayerAttackCutIn(playerUnit, target);
+        else
         {
-            cameraRoutine = StartCoroutine(
-                battleCamera.AttackImpactZoom(playerUnit.transform, target.transform)
-            );
+            playerUnit.PlayAttackAnimation();
+            yield return new WaitForSeconds(0.6f);
         }
-
-        yield return new WaitForSeconds(hitApplyDelay);
 
         if (hit)
         {
@@ -271,9 +256,6 @@ public class BattleManager : MonoBehaviour
         }
 
         yield return new WaitForSeconds(afterHitDelay);
-
-        if (cameraRoutine != null)
-            yield return cameraRoutine;
 
         RemoveDeadEnemies();
 
@@ -306,21 +288,9 @@ public class BattleManager : MonoBehaviour
                 continue;
 
             enemy.PlayAttackAnimation();
-
-            yield return new WaitForSeconds(attackStartDelay);
+            yield return new WaitForSeconds(enemyAttackDelay);
 
             bool hit = RollHit(enemy.accuracy, playerUnit.evasion);
-
-            Coroutine cameraRoutine = null;
-
-            if (battleCamera != null)
-            {
-                cameraRoutine = StartCoroutine(
-                    battleCamera.AttackImpactZoom(enemy.transform, playerUnit.transform)
-                );
-            }
-
-            yield return new WaitForSeconds(hitApplyDelay);
 
             if (hit)
             {
@@ -334,9 +304,6 @@ public class BattleManager : MonoBehaviour
 
             yield return new WaitForSeconds(afterHitDelay);
 
-            if (cameraRoutine != null)
-                yield return cameraRoutine;
-
             if (playerUnit.IsDead)
             {
                 EndBattle();
@@ -348,8 +315,6 @@ public class BattleManager : MonoBehaviour
 
         if (DungeonManager.Instance != null)
             DungeonManager.Instance.AddTurn("전투 라운드 종료");
-        else
-            Debug.LogWarning("DungeonManager.Instance가 없음");
 
         if (uiManager != null)
             uiManager.ShowMainBattleMenu();
