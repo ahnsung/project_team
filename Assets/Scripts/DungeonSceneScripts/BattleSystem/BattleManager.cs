@@ -141,7 +141,13 @@ public class BattleManager : MonoBehaviour
             if (unit == null)
                 unit = enemyObj.AddComponent<BattleUnit>();
 
-            unit.Setup(data.monsterName, data.maxHP, data.attackPower, data.accuracy, data.evasion);
+            unit.Setup(
+                data.monsterName,
+                data.maxHP,
+                data.attackPower,
+                data.accuracy,
+                data.evasion
+            );
 
             BattleEnemyClick click = enemyObj.GetComponent<BattleEnemyClick>();
 
@@ -235,10 +241,16 @@ public class BattleManager : MonoBehaviour
 
         ClearEnemyArrows();
 
-        bool hit = RollHit(playerUnit.accuracy, target.evasion);
+        int playerAccuracy = PlayerStats.Instance != null
+            ? PlayerStats.Instance.GetFinalAccuracy(target.evasion)
+            : playerUnit.accuracy;
+
+        bool hit = Random.Range(0, 100) < playerAccuracy;
 
         if (cutInController != null)
+        {
             yield return cutInController.PlayPlayerAttackCutIn(playerUnit, target);
+        }
         else
         {
             playerUnit.PlayAttackAnimation();
@@ -247,8 +259,12 @@ public class BattleManager : MonoBehaviour
 
         if (hit)
         {
-            target.TakeDamage(playerUnit.attackPower);
-            ShowFloatingText(target.transform.position, playerUnit.attackPower.ToString());
+            int damage = PlayerStats.Instance != null
+                ? PlayerStats.Instance.GetFinalAttackDamage()
+                : playerUnit.attackPower;
+
+            target.TakeDamage(damage);
+            ShowFloatingText(target.transform.position, damage.ToString());
         }
         else
         {
@@ -290,12 +306,25 @@ public class BattleManager : MonoBehaviour
             enemy.PlayAttackAnimation();
             yield return new WaitForSeconds(enemyAttackDelay);
 
-            bool hit = RollHit(enemy.accuracy, playerUnit.evasion);
+            bool hit = RollEnemyHit(enemy.accuracy);
 
             if (hit)
             {
-                playerUnit.TakeDamage(enemy.attackPower);
-                ShowFloatingText(playerUnit.transform.position, enemy.attackPower.ToString());
+                int damage = enemy.attackPower;
+
+                if (PlayerResourceManager.Instance != null)
+                {
+                    // 배고픔 25% 이하 패널티: 모든 자원 감소량/피해량 50% 증가
+                    if (PlayerResourceManager.Instance.IsHungerAllDecreasePenaltyActive())
+                        damage = Mathf.RoundToInt(damage * 1.5f);
+                }
+
+                playerUnit.TakeDamage(damage);
+
+                if (PlayerResourceManager.Instance != null)
+                    PlayerResourceManager.Instance.ChangeHealth(-damage, "적 공격 피해");
+
+                ShowFloatingText(playerUnit.transform.position, damage.ToString());
             }
             else
             {
@@ -326,9 +355,13 @@ public class BattleManager : MonoBehaviour
     {
         state = BattleState.EnemyTurn;
 
+        int finalRunPercent = PlayerStats.Instance != null
+            ? PlayerStats.Instance.GetRunSuccessPercent()
+            : runSuccessPercent;
+
         int roll = Random.Range(0, 100);
 
-        if (roll < runSuccessPercent)
+        if (roll < finalRunPercent)
         {
             yield return new WaitForSeconds(actionDelay);
 
@@ -344,12 +377,16 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private bool RollHit(int attackerAccuracy, int targetEvasion)
+    private bool RollEnemyHit(int enemyAccuracy)
     {
-        int chance = attackerAccuracy - targetEvasion;
-        chance = Mathf.Clamp(chance, 10, 95);
+        if (PlayerStats.Instance == null)
+            return Random.Range(0, 100) < Mathf.Clamp(enemyAccuracy, 10, 95);
 
-        return Random.Range(0, 100) < chance;
+        int playerEvasionChance = PlayerStats.Instance.GetFinalEvasion(enemyAccuracy);
+        int enemyHitChance = 100 - playerEvasionChance;
+        enemyHitChance = Mathf.Clamp(enemyHitChance, 5, 95);
+
+        return Random.Range(0, 100) < enemyHitChance;
     }
 
     private void RemoveDeadEnemies()

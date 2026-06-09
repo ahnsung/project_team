@@ -25,13 +25,25 @@ public class InventoryManager : MonoBehaviour
 
     private void Start()
     {
+        ApplyCapacityFromStats();
         RefreshGrid();
     }
 
+    public void ApplyCapacityFromStats()
+    {
+        if (PlayerStats.Instance == null)
+            return;
+
+        int capacity = PlayerStats.Instance.InventoryCapacity;
+        int calculatedHeight = Mathf.CeilToInt((float)capacity / width);
+
+        unlockedHeight = Mathf.Clamp(calculatedHeight, 1, height);
+    }
+
     public void AddTestBandage() => AddItem(1001);
-    public void AddTestLongBandage() => AddItem(1002);
-    public void AddTestMedKit() => AddItem(1003);
-    public void AddTestScrap() => AddItem(1004);
+    public void AddTestLongBandage() => AddItem(1004);
+    public void AddTestMedKit() => AddItem(1007);
+    public void AddTestScrap() => AddItem(1005);
 
     public bool AddItem(int itemId)
     {
@@ -145,19 +157,28 @@ public class InventoryManager : MonoBehaviour
     {
         if (item == null) return;
 
-        if (item.data.id == 1001)
-            Debug.Log("붕대 사용: 체력 2 회복");
+        if (PlayerResourceManager.Instance != null)
+        {
+            if (item.data.id == 1001)
+                PlayerResourceManager.Instance.HealHealthItem(10);
 
-        if (item.data.id == 1002)
-            Debug.Log("긴 붕대 사용: 체력 3 회복");
+            else if (item.data.id == 1004)
+                PlayerResourceManager.Instance.HealHungerItem(10);
 
-        if (item.data.id == 1003)
-            Debug.Log("의료 키트 사용: 체력 크게 회복");
+            else if (item.data.id == 1007)
+                PlayerResourceManager.Instance.HealMentalItem(10);
+
+            else if (item.data.id == 1002)
+                PlayerResourceManager.Instance.HealHealthItem(10);
+
+            else if (item.data.id == 1003)
+                PlayerResourceManager.Instance.HealHealthItem(10);
+        }
 
         item.remainUseCount--;
 
-        if (item.data.consumeTurnOnUse)
-            Debug.Log("아이템 사용으로 턴 +1");
+        if (item.data.consumeTurnOnUse && DungeonManager.Instance != null)
+            DungeonManager.Instance.AddTurn("아이템 사용");
 
         if (item.remainUseCount <= 0)
             RemoveItem(item);
