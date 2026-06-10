@@ -228,14 +228,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   imageA: {fileID: 400142749}
   imageB: {fileID: 13529239}
-  cutsceneSprites:
-  - {fileID: -5622141577581997554, guid: ed727b19cb627824cbbbbe7bfa473bf9, type: 3}
-  - {fileID: 6642736171893128807, guid: 8afe510bff51b5f47b5be60a886de634, type: 3}
-  - {fileID: -2622925143585079942, guid: bae3850388a6bde429fff9d196311f86, type: 3}
-  - {fileID: 6742537026262390211, guid: c1e0e10a20e2acf499e87eca253460e4, type: 3}
+  fadeImage: {fileID: 691080441}
+  cutsceneSprites: []
   fadeDuration: 1
   endFadeDuration: 1
-  fadeImage: {fileID: 691080441}
 --- !u!114 &97191719
 MonoBehaviour:
   m_ObjectHideFlags: 0

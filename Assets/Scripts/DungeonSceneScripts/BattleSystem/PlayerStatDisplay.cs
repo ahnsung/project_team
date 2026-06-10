@@ -18,4 +18,23 @@ public class PlayerStatDisplay : MonoBehaviour
         conText.text = "CON : " + PlayerStats.Instance.CON;
         intText.text = "INT : " + PlayerStats.Instance.INT;
     }
+
+    public void IncreaseSTR()
+    {
+        if (PlayerStats.Instance == null)
+            return;
+
+        PlayerStats.Instance.STR++;
+    }
+
+    public void DecreaseSTR()
+    {
+        if (PlayerStats.Instance == null)
+            return;
+
+        PlayerStats.Instance.STR--;
+
+        if (PlayerStats.Instance.STR < 0)
+            PlayerStats.Instance.STR = 0;
+    }
 }

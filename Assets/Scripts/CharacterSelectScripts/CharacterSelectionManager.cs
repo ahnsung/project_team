@@ -51,11 +51,11 @@ public class CharacterSelectionManager : MonoBehaviour
         confirmPanel.SetActive(true);
 
         if (characterID == 0)
-            confirmText.text = "Do you want to select Knight?";
+            confirmText.text = "도적을 하시겠습니까?";
         else if (characterID == 1)
-            confirmText.text = "Do you want to select Mage?";
+            confirmText.text = "전사를 하시겠습니까?";
         else if (characterID == 2)
-            confirmText.text = "Do you want to select Archer?";
+            confirmText.text = "부랑자를 하시겠습니까?";
     }
 
     public void ConfirmCharacterSelection()
@@ -85,7 +85,7 @@ public class CharacterSelectionManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(playerName))
         {
-            Debug.Log("Please enter a character name.");
+            Debug.Log("이름을 입력하세요");
             return;
         }
 

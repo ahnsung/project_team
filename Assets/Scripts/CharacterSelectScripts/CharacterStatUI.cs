@@ -17,7 +17,7 @@ public class CharacterStatUI : MonoBehaviour
         intText.text = "INT : 3";
         dexText.text = "DEX : 7";
 
-        descriptionText.text = "A balanced warrior with high strength and defense.";
+        descriptionText.text = "치명적인 공격성과 다양한 재주";
     }
 
     public void ShowMage()
@@ -27,7 +27,7 @@ public class CharacterStatUI : MonoBehaviour
         intText.text = "INT : 15";
         dexText.text = "DEX : 8";
 
-        descriptionText.text = "A master of magic with powerful spells.";
+        descriptionText.text = "야만적인 공격력과 끝을 모르는 생명력";
     }
 
     public void ShowArcher()
@@ -37,6 +37,6 @@ public class CharacterStatUI : MonoBehaviour
         intText.text = "INT : 5";
         dexText.text = "DEX : 15";
 
-        descriptionText.text = "A fast ranged attacker with high agility.";
+        descriptionText.text = "압도적인 생명력";
     }
 }

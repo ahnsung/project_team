@@ -57,16 +57,6 @@ public class BattleManager : MonoBehaviour
         Instance = this;
     }
 
-    public bool IsBattleRunning()
-    {
-        return battleRunning;
-    }
-
-    public bool CanPlayerUseItem()
-    {
-        return battleRunning && state == BattleState.PlayerTurn;
-    }
-
     private void Start()
     {
         if (uiManager != null)
@@ -77,6 +67,16 @@ public class BattleManager : MonoBehaviour
 
         if (enemyGroup != null)
             enemyGroup.gameObject.SetActive(false);
+    }
+
+    public bool IsBattleRunning()
+    {
+        return battleRunning;
+    }
+
+    public bool CanPlayerUseItem()
+    {
+        return battleRunning && state == BattleState.PlayerTurn;
     }
 
     public IEnumerator StartBattleEncounter()
@@ -288,14 +288,17 @@ public class BattleManager : MonoBehaviour
 
         ClearEnemyArrows();
 
-        int playerAccuracy = PlayerStats.Instance != null
-            ? PlayerStats.Instance.GetFinalAccuracy(target.evasion)
-            : playerUnit.accuracy;
+        int playerAccuracy =
+            PlayerStats.Instance != null
+                ? PlayerStats.Instance.GetFinalAccuracy(target.evasion)
+                : playerUnit.accuracy;
 
         bool hit = Random.Range(0, 100) < playerAccuracy;
 
         if (cutInController != null)
+        {
             yield return cutInController.PlayPlayerAttackCutIn(playerUnit, target);
+        }
         else
         {
             playerUnit.PlayAttackAnimation();
@@ -304,9 +307,10 @@ public class BattleManager : MonoBehaviour
 
         if (hit)
         {
-            int damage = PlayerStats.Instance != null
-                ? PlayerStats.Instance.GetFinalAttackDamage()
-                : playerUnit.attackPower;
+            int damage =
+                PlayerStats.Instance != null
+                    ? PlayerStats.Instance.GetFinalAttackDamage()
+                    : playerUnit.attackPower;
 
             target.TakeDamage(damage);
             ShowFloatingText(target.transform.position, damage.ToString());
@@ -348,8 +352,15 @@ public class BattleManager : MonoBehaviour
             if (enemy.IsDead || !enemy.gameObject.activeInHierarchy)
                 continue;
 
-            enemy.PlayAttackAnimation();
-            yield return new WaitForSeconds(enemyAttackDelay);
+            if (cutInController != null)
+            {
+                yield return cutInController.PlayEnemyAttackCutIn(enemy, playerUnit);
+            }
+            else
+            {
+                enemy.PlayAttackAnimation();
+                yield return new WaitForSeconds(enemyAttackDelay);
+            }
 
             bool hit = RollEnemyHit(enemy.accuracy);
 
@@ -405,9 +416,10 @@ public class BattleManager : MonoBehaviour
     {
         state = BattleState.EnemyTurn;
 
-        int finalRunPercent = PlayerStats.Instance != null
-            ? PlayerStats.Instance.GetRunSuccessPercent()
-            : runSuccessPercent;
+        int finalRunPercent =
+            PlayerStats.Instance != null
+                ? PlayerStats.Instance.GetRunSuccessPercent()
+                : runSuccessPercent;
 
         int roll = Random.Range(0, 100);
 
@@ -434,6 +446,7 @@ public class BattleManager : MonoBehaviour
 
         int playerEvasionChance = PlayerStats.Instance.GetFinalEvasion(enemyAccuracy);
         int enemyHitChance = 100 - playerEvasionChance;
+
         enemyHitChance = Mathf.Clamp(enemyHitChance, 5, 95);
 
         return Random.Range(0, 100) < enemyHitChance;
