@@ -280,4 +280,142 @@ public class InventoryManager : MonoBehaviour
 
         return false;
     }
+
+    public bool ContainsItem(InventoryItem item)
+    {
+        return item != null && items.Contains(item);
+    }
+
+    public bool TryTakeItemForEquipment(
+        InventoryItem item)
+    {
+        if (item == null)
+            return false;
+
+        if (!items.Contains(item))
+            return false;
+
+        RemoveFromGrid(item);
+        items.Remove(item);
+
+        RefreshInventoryUI();
+        return true;
+    }
+
+    public bool TryReturnEquipmentToInventory(
+        InventoryItem item)
+    {
+        if (item == null || item.data == null)
+            return false;
+
+        if (items.Contains(item))
+            return true;
+
+        int originalRotation = item.rotation;
+        Vector2Int foundPosition;
+
+        for (int rotationIndex = 0;
+             rotationIndex < 4;
+             rotationIndex++)
+        {
+            item.SetRotation(rotationIndex);
+
+            if (TryFindEmptyPosition(
+                item,
+                out foundPosition))
+            {
+                items.Add(item);
+                PlaceItem(item, foundPosition);
+
+                RefreshInventoryUI();
+                return true;
+            }
+        }
+
+        item.SetRotation(originalRotation);
+        return false;
+    }
+
+    public bool TryFindEmptyPosition(
+        InventoryItem item,
+        out Vector2Int foundPosition)
+    {
+        foundPosition = Vector2Int.zero;
+
+        if (item == null)
+            return false;
+
+        for (int y = 0; y < unlockedHeight; y++)
+        {
+            for (int x = 0; x < unlockedWidth; x++)
+            {
+                Vector2Int target =
+                    new Vector2Int(x, y);
+
+                if (CanPlaceItem(item, target, null))
+                {
+                    foundPosition = target;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryRestoreItemAtOriginalPosition(
+        InventoryItem item,
+        Vector2Int originalPosition,
+        int originalRotation)
+    {
+        if (item == null)
+            return false;
+
+        item.SetRotation(originalRotation);
+
+        if (!CanPlaceItem(
+            item,
+            originalPosition,
+            null))
+        {
+            return false;
+        }
+
+        if (!items.Contains(item))
+            items.Add(item);
+
+        PlaceItem(item, originalPosition);
+        RefreshInventoryUI();
+
+        return true;
+    }
+
+    public InventoryItem FindFirstEquipment(
+        EquipmentType equipmentType)
+    {
+        foreach (InventoryItem item in items)
+        {
+            if (item == null || item.data == null)
+                continue;
+
+            if (!item.data.IsEquipment)
+                continue;
+
+            if (item.data.equipmentType ==
+                equipmentType)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private void RefreshInventoryUI()
+    {
+        if (InventoryUIManager.Instance != null)
+        {
+            InventoryUIManager.Instance.RefreshUI();
+        }
+    }
 }

@@ -10,12 +10,33 @@ public class PlayerStats : MonoBehaviour
     public int CON = 5;
     public int INT = 5;
 
-    [Header("Weapon")]
+    [Header("Legacy Weapon")]
+    [Tooltip("기존 코드 호환용 무기 공격력입니다.")]
     public int weaponDamage = 0;
 
-    public int MaxHealth => 50 + CON * 10;
-    public int MaxHunger => 100 + CON * 5;
-    public int MaxMental => 50 + INT * 5;
+    [Header("Equipment Bonus - Runtime")]
+    [SerializeField] private int equipmentSTR;
+    [SerializeField] private int equipmentDEX;
+    [SerializeField] private int equipmentCON;
+    [SerializeField] private int equipmentINT;
+    [SerializeField] private int equipmentAttackPower;
+    [SerializeField] private int equipmentAccuracyBonus;
+
+    public int TotalSTR => STR + equipmentSTR;
+    public int TotalDEX => DEX + equipmentDEX;
+    public int TotalCON => CON + equipmentCON;
+    public int TotalINT => INT + equipmentINT;
+
+    public int EquipmentAttackPower =>
+        equipmentAttackPower;
+
+    public int EquipmentAccuracyBonus =>
+        equipmentAccuracyBonus;
+
+    public int MaxHealth => 50 + TotalCON * 10;
+    public int MaxHunger => 100 + TotalCON * 5;
+    public int MaxMental => 50 + TotalINT * 5;
+
     public int InventoryCapacity => 32;
 
     private const string STR_KEY = "STAT_STR";
@@ -25,13 +46,21 @@ public class PlayerStats : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
         LoadStats();
     }
 
     public int GetBaseAttackDamage()
     {
-        return STR * 2 + weaponDamage;
+        return TotalSTR * 2 +
+               weaponDamage +
+               equipmentAttackPower;
     }
 
     public int GetFinalAttackDamage()
@@ -39,9 +68,11 @@ public class PlayerStats : MonoBehaviour
         int damage = GetBaseAttackDamage();
 
         if (PlayerResourceManager.Instance != null &&
-            PlayerResourceManager.Instance.IsMentalDamagePenaltyActive())
+            PlayerResourceManager.Instance
+                .IsMentalDamagePenaltyActive())
         {
-            damage = Mathf.RoundToInt(damage * 0.5f);
+            damage =
+                Mathf.RoundToInt(damage * 0.5f);
         }
 
         return Mathf.Max(1, damage);
@@ -49,44 +80,140 @@ public class PlayerStats : MonoBehaviour
 
     public int GetFinalAccuracy(int enemyEvasion)
     {
-        int accuracy = 100 - (enemyEvasion - DEX * 3);
+        int accuracy =
+            100 - (enemyEvasion - TotalDEX * 3);
+
+        accuracy += equipmentAccuracyBonus;
 
         if (PlayerResourceManager.Instance != null)
-            accuracy -= PlayerResourceManager.Instance.GetMentalAccuracyPenalty();
+        {
+            accuracy -=
+                PlayerResourceManager.Instance
+                    .GetMentalAccuracyPenalty();
+        }
 
         return Mathf.Clamp(accuracy, 10, 95);
     }
 
     public int GetFinalEvasion(int enemyAccuracy)
     {
-        int evasionChance = 100 - (enemyAccuracy - DEX * 3);
+        int evasionChance =
+            100 - (enemyAccuracy - TotalDEX * 3);
+
         return Mathf.Clamp(evasionChance, 5, 95);
     }
 
     public int GetRunSuccessPercent()
     {
-        return Mathf.Clamp(50 + DEX * 2, 0, 95);
+        return Mathf.Clamp(
+            50 + TotalDEX * 2,
+            0,
+            95
+        );
     }
 
-    public void AddSTR() { STR++; SaveStats(); ApplyStatChange(); }
-    public void SubSTR() { STR = Mathf.Max(0, STR - 1); SaveStats(); ApplyStatChange(); }
+    public void SetEquipmentBonuses(
+        EquipmentStatModifier modifier)
+    {
+        if (modifier == null)
+        {
+            equipmentSTR = 0;
+            equipmentDEX = 0;
+            equipmentCON = 0;
+            equipmentINT = 0;
+            equipmentAttackPower = 0;
+            equipmentAccuracyBonus = 0;
+        }
+        else
+        {
+            equipmentSTR = modifier.str;
+            equipmentDEX = modifier.dex;
+            equipmentCON = modifier.con;
+            equipmentINT = modifier.intelligence;
+            equipmentAttackPower = modifier.attackPower;
+            equipmentAccuracyBonus =
+                modifier.accuracyBonus;
+        }
 
-    public void AddDEX() { DEX++; SaveStats(); ApplyStatChange(); }
-    public void SubDEX() { DEX = Mathf.Max(0, DEX - 1); SaveStats(); ApplyStatChange(); }
+        ApplyStatChange();
+    }
 
-    public void AddCON() { CON++; SaveStats(); ApplyStatChange(); }
-    public void SubCON() { CON = Mathf.Max(0, CON - 1); SaveStats(); ApplyStatChange(); }
+    public void ClearEquipmentBonuses()
+    {
+        SetEquipmentBonuses(
+            new EquipmentStatModifier()
+        );
+    }
 
-    public void AddINT() { INT++; SaveStats(); ApplyStatChange(); }
-    public void SubINT() { INT = Mathf.Max(0, INT - 1); SaveStats(); ApplyStatChange(); }
+    public void AddSTR()
+    {
+        STR++;
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void SubSTR()
+    {
+        STR = Mathf.Max(0, STR - 1);
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void AddDEX()
+    {
+        DEX++;
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void SubDEX()
+    {
+        DEX = Mathf.Max(0, DEX - 1);
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void AddCON()
+    {
+        CON++;
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void SubCON()
+    {
+        CON = Mathf.Max(0, CON - 1);
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void AddINT()
+    {
+        INT++;
+        SaveStats();
+        ApplyStatChange();
+    }
+
+    public void SubINT()
+    {
+        INT = Mathf.Max(0, INT - 1);
+        SaveStats();
+        ApplyStatChange();
+    }
 
     private void ApplyStatChange()
     {
         if (PlayerResourceManager.Instance != null)
-            PlayerResourceManager.Instance.ApplyMaxResourceFromStats();
+        {
+            PlayerResourceManager.Instance
+                .ApplyMaxResourceFromStats();
+        }
 
         if (InventoryManager.Instance != null)
-            InventoryManager.Instance.ApplyCapacityFromStats();
+        {
+            InventoryManager.Instance
+                .ApplyCapacityFromStats();
+        }
     }
 
     private void SaveStats()
