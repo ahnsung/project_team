@@ -14,7 +14,8 @@ public class ItemData
     public int maxUseCount;
 
     public bool consumeTurnOnUse;
-    public bool canDrop;
+
+    public bool canDrop = true;
 
     [TextArea]
     public string effectDescription;
@@ -22,14 +23,15 @@ public class ItemData
     public Sprite icon;
 
     [Header("Inventory Shape")]
-    [Tooltip("아이템이 차지하는 상대 좌표입니다. 반드시 (0,0)을 포함하는 것이 좋습니다.")]
-    public List<Vector2Int> shape = new List<Vector2Int>();
+    public List<Vector2Int> shape =
+        new List<Vector2Int>();
 
     [Header("Equipment")]
-    public EquipmentType equipmentType = EquipmentType.None;
+    public EquipmentType equipmentType =
+        EquipmentType.None;
 
     [Min(0)]
-    public int maxDurability = 0;
+    public int maxDurability;
 
     public EquipmentStatModifier statModifier =
         new EquipmentStatModifier();
@@ -55,12 +57,14 @@ public class ItemData
         }
     }
 
-    public int GetSafeMaxDurability()
+    public int SafeMaxDurability
     {
-        if (!IsEquipment)
-            return 0;
-
-        return Mathf.Max(1, maxDurability);
+        get
+        {
+            return IsEquipment
+                ? Mathf.Max(1, maxDurability)
+                : 0;
+        }
     }
 
     public void EnsureValidShape()

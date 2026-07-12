@@ -30,15 +30,50 @@ public class EquipmentManager : MonoBehaviour
 
     public event Action OnEquipmentChanged;
 
-    public InventoryItem Head => head;
-    public InventoryItem Armor => armor;
-    public InventoryItem Shoes => shoes;
-    public InventoryItem MainWeapon => mainWeapon;
-    public InventoryItem SubWeapon => subWeapon;
+    public InventoryItem Head
+    {
+        get
+        {
+            return head;
+        }
+    }
+
+    public InventoryItem Armor
+    {
+        get
+        {
+            return armor;
+        }
+    }
+
+    public InventoryItem Shoes
+    {
+        get
+        {
+            return shoes;
+        }
+    }
+
+    public InventoryItem MainWeapon
+    {
+        get
+        {
+            return mainWeapon;
+        }
+    }
+
+    public InventoryItem SubWeapon
+    {
+        get
+        {
+            return subWeapon;
+        }
+    }
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null &&
+            Instance != this)
         {
             Destroy(gameObject);
             return;
@@ -56,87 +91,58 @@ public class EquipmentManager : MonoBehaviour
     private void ResolveReferences()
     {
         if (inventoryManager == null)
+        {
             inventoryManager =
                 InventoryManager.Instance;
-
-        if (playerStats == null)
-            playerStats =
-                PlayerStats.Instance;
-
-        if (inventoryManager == null)
-        {
-            Debug.LogError(
-                "[EquipmentManager] " +
-                "InventoryManager를 찾을 수 없습니다."
-            );
         }
 
         if (playerStats == null)
         {
-            Debug.LogError(
-                "[EquipmentManager] " +
-                "PlayerStats를 찾을 수 없습니다."
-            );
+            playerStats =
+                PlayerStats.Instance;
         }
     }
 
     public bool CanChangeEquipment()
     {
-        if (BattleManager.Instance == null)
-            return true;
+        return
+            BattleManager.Instance == null ||
+            !BattleManager.Instance
+                .IsBattleRunning();
+    }
 
-        return !BattleManager.Instance
-            .IsBattleRunning();
+    public bool CanSwapWeapons()
+    {
+        if (BattleManager.Instance == null ||
+            !BattleManager.Instance
+                .IsBattleRunning())
+        {
+            return true;
+        }
+
+        return BattleManager.Instance
+            .CanPlayerUseItem();
     }
 
     public bool EquipFromInventory(
-        InventoryItem newItem)
+        InventoryItem item)
     {
-        ResolveReferences();
-
-        if (newItem == null ||
-            newItem.data == null)
+        if (item == null ||
+            item.data == null ||
+            !item.data.IsEquipment)
         {
-            Debug.LogWarning(
-                "[EquipmentManager] 장착할 아이템이 없습니다."
-            );
-
             return false;
         }
 
-        if (!newItem.data.IsEquipment)
-        {
-            Debug.LogWarning(
-                "[EquipmentManager] 장비 아이템이 아닙니다."
+        EquipmentSlotType slot =
+            GetDefaultSlot(
+                item.data
             );
 
-            return false;
-        }
-
-        if (!CanChangeEquipment())
-        {
-            Debug.Log(
-                "전투 중에는 장비를 교체할 수 없습니다."
-            );
-
-            return false;
-        }
-
-        if (inventoryManager == null ||
-            !inventoryManager.ContainsItem(newItem))
-        {
-            Debug.LogWarning(
-                "[EquipmentManager] " +
-                "해당 장비가 인벤토리에 없습니다."
-            );
-
-            return false;
-        }
-
-        EquipmentSlotType targetSlot =
-            GetDefaultSlot(newItem.data);
-
-        return EquipToSlot(newItem, targetSlot);
+        return EquipToSlot(
+            item,
+            slot
+        );
     }
 
     public bool EquipToSlot(
@@ -145,44 +151,54 @@ public class EquipmentManager : MonoBehaviour
     {
         ResolveReferences();
 
-        if (newItem == null ||
-            newItem.data == null)
+        if (inventoryManager == null ||
+            playerStats == null)
         {
+            Debug.LogError(
+                "EquipmentManager 필수 참조가 없습니다."
+            );
+
             return false;
         }
 
-        if (!IsCompatible(
-            newItem.data,
-            targetSlot))
+        if (newItem == null ||
+            newItem.data == null ||
+            !IsCompatible(
+                newItem.data,
+                targetSlot))
         {
-            Debug.LogWarning(
-                "[EquipmentManager] " +
-                "장비 부위와 슬롯이 맞지 않습니다."
-            );
-
             return false;
         }
 
         if (!CanChangeEquipment())
         {
             Debug.Log(
-                "전투 중에는 장비를 교체할 수 없습니다."
+                "전투 중에는 장비를 장착하거나 교체할 수 없습니다."
             );
 
             return false;
         }
 
-        InventoryItem oldItem =
-            GetEquippedItem(targetSlot);
+        if (!inventoryManager
+            .ContainsItem(newItem))
+        {
+            return false;
+        }
 
-        Vector2Int newItemOriginalPosition =
+        InventoryItem oldItem =
+            GetEquippedItem(
+                targetSlot
+            );
+
+        Vector2Int originalPosition =
             newItem.position;
 
-        int newItemOriginalRotation =
+        int originalRotation =
             newItem.rotation;
 
         if (!inventoryManager
-            .TryTakeItemForEquipment(newItem))
+            .TryTakeItemForEquipment(
+                newItem))
         {
             return false;
         }
@@ -197,19 +213,19 @@ public class EquipmentManager : MonoBehaviour
 
             if (!returned)
             {
-                bool rollbackSucceeded =
+                bool restored =
                     inventoryManager
-                        .TryRestoreItemAtOriginalPosition(
+                        .TryRestoreItem(
                             newItem,
-                            newItemOriginalPosition,
-                            newItemOriginalRotation
+                            originalPosition,
+                            originalRotation
                         );
 
-                if (!rollbackSucceeded)
+                if (!restored)
                 {
                     Debug.LogError(
-                        "[EquipmentManager] " +
-                        "장착 교체 롤백에 실패했습니다."
+                        "장비 교체 실패 후 " +
+                        "새 장비 복구에도 실패했습니다."
                     );
                 }
 
@@ -222,7 +238,10 @@ public class EquipmentManager : MonoBehaviour
             }
         }
 
-        SetEquippedItem(targetSlot, newItem);
+        SetEquippedItem(
+            targetSlot,
+            newItem
+        );
 
         RecalculateEquipmentStats();
         NotifyChanged();
@@ -244,32 +263,34 @@ public class EquipmentManager : MonoBehaviour
             return false;
         }
 
-        InventoryItem equipped =
+        InventoryItem equippedItem =
             GetEquippedItem(slot);
 
-        if (equipped == null)
+        if (equippedItem == null ||
+            inventoryManager == null)
+        {
             return false;
-
-        if (inventoryManager == null)
-            return false;
+        }
 
         bool returned =
             inventoryManager
                 .TryReturnEquipmentToInventory(
-                    equipped
+                    equippedItem
                 );
 
         if (!returned)
         {
             Debug.Log(
-                "인벤토리에 장비를 " +
-                "해제할 공간이 없습니다."
+                "인벤토리에 장비를 해제할 공간이 없습니다."
             );
 
             return false;
         }
 
-        SetEquippedItem(slot, null);
+        SetEquippedItem(
+            slot,
+            null
+        );
 
         RecalculateEquipmentStats();
         NotifyChanged();
@@ -279,24 +300,23 @@ public class EquipmentManager : MonoBehaviour
 
     public bool SwapWeapons()
     {
-        ResolveReferences();
-
-        if (BattleManager.Instance != null &&
-            BattleManager.Instance
-                .IsBattleRunning() &&
-            !BattleManager.Instance
-                .CanPlayerUseItem())
+        if (!CanSwapWeapons())
         {
             Debug.Log(
-                "현재는 무기를 교체할 수 없습니다."
+                "현재는 주 무기와 보조 무기를 교체할 수 없습니다."
             );
 
             return false;
         }
 
-        InventoryItem temp = mainWeapon;
-        mainWeapon = subWeapon;
-        subWeapon = temp;
+        InventoryItem temp =
+            mainWeapon;
+
+        mainWeapon =
+            subWeapon;
+
+        subWeapon =
+            temp;
 
         RecalculateEquipmentStats();
         NotifyChanged();
@@ -307,18 +327,25 @@ public class EquipmentManager : MonoBehaviour
     public void ConsumeMainWeaponDurability(
         int amount)
     {
-        if (mainWeapon == null)
+        if (mainWeapon == null ||
+            amount <= 0)
+        {
             return;
+        }
 
-        mainWeapon.ReduceDurability(amount);
+        mainWeapon.ReduceDurability(
+            amount
+        );
 
         if (mainWeapon.IsBroken)
         {
             Debug.Log(
-                $"{mainWeapon.data.itemName}이(가) 파괴되었습니다."
+                mainWeapon.data.itemName +
+                "이(가) 파괴되었습니다."
             );
 
             mainWeapon = null;
+
             RecalculateEquipmentStats();
         }
 
@@ -328,6 +355,9 @@ public class EquipmentManager : MonoBehaviour
     public void ConsumeArmorDurability(
         int amount)
     {
+        if (amount <= 0)
+            return;
+
         EquipmentSlotType targetSlot;
         InventoryItem targetItem;
 
@@ -336,36 +366,46 @@ public class EquipmentManager : MonoBehaviour
             targetSlot =
                 EquipmentSlotType.Armor;
 
-            targetItem = armor;
+            targetItem =
+                armor;
         }
         else if (head != null)
         {
             targetSlot =
                 EquipmentSlotType.Head;
 
-            targetItem = head;
+            targetItem =
+                head;
         }
         else if (shoes != null)
         {
             targetSlot =
                 EquipmentSlotType.Shoes;
 
-            targetItem = shoes;
+            targetItem =
+                shoes;
         }
         else
         {
             return;
         }
 
-        targetItem.ReduceDurability(amount);
+        targetItem.ReduceDurability(
+            amount
+        );
 
         if (targetItem.IsBroken)
         {
             Debug.Log(
-                $"{targetItem.data.itemName}이(가) 파괴되었습니다."
+                targetItem.data.itemName +
+                "이(가) 파괴되었습니다."
             );
 
-            SetEquippedItem(targetSlot, null);
+            SetEquippedItem(
+                targetSlot,
+                null
+            );
+
             RecalculateEquipmentStats();
         }
 
@@ -397,31 +437,26 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
-    private void SetEquippedItem(
-        EquipmentSlotType slot,
-        InventoryItem item)
+    public EquipmentType GetEquipmentTypeForSlot(
+        EquipmentSlotType slot)
     {
         switch (slot)
         {
             case EquipmentSlotType.Head:
-                head = item;
-                break;
+                return EquipmentType.Head;
 
             case EquipmentSlotType.Armor:
-                armor = item;
-                break;
+                return EquipmentType.Armor;
 
             case EquipmentSlotType.Shoes:
-                shoes = item;
-                break;
+                return EquipmentType.Shoes;
 
             case EquipmentSlotType.MainWeapon:
-                mainWeapon = item;
-                break;
-
             case EquipmentSlotType.SubWeapon:
-                subWeapon = item;
-                break;
+                return EquipmentType.Weapon;
+
+            default:
+                return EquipmentType.None;
         }
     }
 
@@ -459,61 +494,91 @@ public class EquipmentManager : MonoBehaviour
             return false;
         }
 
+        return
+            data.equipmentType ==
+            GetEquipmentTypeForSlot(
+                slot
+            );
+    }
+
+    private void SetEquippedItem(
+        EquipmentSlotType slot,
+        InventoryItem item)
+    {
         switch (slot)
         {
             case EquipmentSlotType.Head:
-                return data.equipmentType ==
-                       EquipmentType.Head;
+                head = item;
+                break;
 
             case EquipmentSlotType.Armor:
-                return data.equipmentType ==
-                       EquipmentType.Armor;
+                armor = item;
+                break;
 
             case EquipmentSlotType.Shoes:
-                return data.equipmentType ==
-                       EquipmentType.Shoes;
+                shoes = item;
+                break;
 
             case EquipmentSlotType.MainWeapon:
-            case EquipmentSlotType.SubWeapon:
-                return data.equipmentType ==
-                       EquipmentType.Weapon;
+                mainWeapon = item;
+                break;
 
-            default:
-                return false;
+            case EquipmentSlotType.SubWeapon:
+                subWeapon = item;
+                break;
         }
     }
 
     private void RecalculateEquipmentStats()
     {
+        ResolveReferences();
+
         if (playerStats == null)
             return;
 
         EquipmentStatModifier total =
             new EquipmentStatModifier();
 
-        AddEquipmentModifier(total, head);
-        AddEquipmentModifier(total, armor);
-        AddEquipmentModifier(total, shoes);
+        AddModifier(
+            total,
+            head
+        );
 
-        // 보조 무기는 보너스를 제공하지 않는다.
-        AddEquipmentModifier(total, mainWeapon);
+        AddModifier(
+            total,
+            armor
+        );
 
-        playerStats.SetEquipmentBonuses(total);
+        AddModifier(
+            total,
+            shoes
+        );
+
+        // 보조 무기는 능력치를 적용하지 않는다.
+        AddModifier(
+            total,
+            mainWeapon
+        );
+
+        playerStats.SetEquipmentBonuses(
+            total
+        );
     }
 
-    private void AddEquipmentModifier(
+    private void AddModifier(
         EquipmentStatModifier total,
         InventoryItem item)
     {
-        if (total == null ||
-            item == null ||
+        if (item == null ||
             item.data == null ||
             item.IsBroken)
         {
             return;
         }
 
-        total.Add(item.data.statModifier);
+        total.Add(
+            item.data.statModifier
+        );
     }
 
     private void NotifyChanged()
@@ -522,66 +587,8 @@ public class EquipmentManager : MonoBehaviour
 
         if (InventoryUIManager.Instance != null)
         {
-            InventoryUIManager.Instance.RefreshUI();
+            InventoryUIManager.Instance
+                .RefreshUI();
         }
-    }
-
-    // Unity Button 테스트용
-    public void EquipFirstWeaponForTest()
-    {
-        ResolveReferences();
-
-        if (inventoryManager == null)
-            return;
-
-        InventoryItem weapon =
-            inventoryManager.FindFirstEquipment(
-                EquipmentType.Weapon
-            );
-
-        if (weapon == null)
-        {
-            Debug.Log(
-                "인벤토리에 무기 장비가 없습니다."
-            );
-
-            return;
-        }
-
-        EquipFromInventory(weapon);
-    }
-
-    public void EquipFirstArmorForTest()
-    {
-        ResolveReferences();
-
-        if (inventoryManager == null)
-            return;
-
-        InventoryItem armorItem =
-            inventoryManager.FindFirstEquipment(
-                EquipmentType.Armor
-            );
-
-        if (armorItem == null)
-        {
-            Debug.Log(
-                "인벤토리에 갑옷 장비가 없습니다."
-            );
-
-            return;
-        }
-
-        EquipFromInventory(armorItem);
-    }
-
-    public void UnequipMainWeaponForTest()
-    {
-        Unequip(EquipmentSlotType.MainWeapon);
-    }
-
-    public void UnequipArmorForTest()
-    {
-        Unequip(EquipmentSlotType.Armor);
     }
 }

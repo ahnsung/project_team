@@ -5,6 +5,7 @@ using UnityEngine;
 public class InventoryItem
 {
     public string uniqueId;
+
     public ItemData data;
 
     public int remainUseCount;
@@ -20,18 +21,20 @@ public class InventoryItem
     public InventoryItem(ItemData data)
     {
         uniqueId = System.Guid.NewGuid().ToString();
+
         this.data = data;
 
-        remainUseCount = data != null
-            ? Mathf.Max(0, data.maxUseCount)
-            : 0;
+        remainUseCount =
+            data != null
+                ? Mathf.Max(0, data.maxUseCount)
+                : 0;
 
         position = Vector2Int.zero;
         rotation = 0;
 
         currentDurability =
             data != null && data.IsEquipment
-                ? data.GetSafeMaxDurability()
+                ? data.SafeMaxDurability
                 : 0;
     }
 
@@ -39,7 +42,8 @@ public class InventoryItem
     {
         get
         {
-            return data != null && data.IsEquipment;
+            return data != null &&
+                   data.IsEquipment;
         }
     }
 
@@ -47,24 +51,9 @@ public class InventoryItem
     {
         get
         {
-            return IsEquipment && currentDurability <= 0;
+            return IsEquipment &&
+                   currentDurability <= 0;
         }
-    }
-
-    public void InitializeMissingRuntimeData()
-    {
-        if (string.IsNullOrEmpty(uniqueId))
-            uniqueId = System.Guid.NewGuid().ToString();
-
-        rotation = Mathf.Clamp(rotation, 0, 3);
-
-        if (data == null)
-            return;
-
-        data.EnsureValidShape();
-
-        if (data.IsEquipment && currentDurability <= 0)
-            currentDurability = data.GetSafeMaxDurability();
     }
 
     public void ReduceDurability(int amount)
@@ -76,7 +65,10 @@ public class InventoryItem
             return;
 
         currentDurability =
-            Mathf.Max(0, currentDurability - amount);
+            Mathf.Max(
+                0,
+                currentDurability - amount
+            );
     }
 
     public List<Vector2Int> GetOccupiedCells(
@@ -86,7 +78,9 @@ public class InventoryItem
             new List<Vector2Int>();
 
         foreach (Vector2Int offset in GetRotatedShape())
+        {
             result.Add(basePosition + offset);
+        }
 
         return result;
     }
@@ -109,7 +103,13 @@ public class InventoryItem
             Vector2Int point = cell;
 
             for (int i = 0; i < rotation; i++)
-                point = new Vector2Int(point.y, -point.x);
+            {
+                point =
+                    new Vector2Int(
+                        point.y,
+                        -point.x
+                    );
+            }
 
             rotated.Add(point);
         }
@@ -124,34 +124,35 @@ public class InventoryItem
 
     public void SetRotation(int value)
     {
-        rotation = ((value % 4) + 4) % 4;
+        rotation =
+            ((value % 4) + 4) % 4;
     }
 
     private List<Vector2Int> NormalizeShape(
-        List<Vector2Int> shape)
+        List<Vector2Int> source)
     {
-        List<Vector2Int> result =
-            new List<Vector2Int>();
-
-        if (shape == null || shape.Count == 0)
+        if (source == null ||
+            source.Count == 0)
         {
-            result.Add(Vector2Int.zero);
-            return result;
+            return new List<Vector2Int>
+            {
+                Vector2Int.zero
+            };
         }
 
         int minX = int.MaxValue;
         int minY = int.MaxValue;
 
-        foreach (Vector2Int cell in shape)
+        foreach (Vector2Int cell in source)
         {
-            if (cell.x < minX)
-                minX = cell.x;
-
-            if (cell.y < minY)
-                minY = cell.y;
+            minX = Mathf.Min(minX, cell.x);
+            minY = Mathf.Min(minY, cell.y);
         }
 
-        foreach (Vector2Int cell in shape)
+        List<Vector2Int> result =
+            new List<Vector2Int>();
+
+        foreach (Vector2Int cell in source)
         {
             result.Add(
                 new Vector2Int(
@@ -171,13 +172,13 @@ public class InventoryItem
 
         foreach (Vector2Int cell in GetRotatedShape())
         {
-            if (cell.x > maxX)
-                maxX = cell.x;
-
-            if (cell.y > maxY)
-                maxY = cell.y;
+            maxX = Mathf.Max(maxX, cell.x);
+            maxY = Mathf.Max(maxY, cell.y);
         }
 
-        return new Vector2Int(maxX + 1, maxY + 1);
+        return new Vector2Int(
+            maxX + 1,
+            maxY + 1
+        );
     }
 }

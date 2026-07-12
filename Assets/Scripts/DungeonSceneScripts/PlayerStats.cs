@@ -11,33 +11,107 @@ public class PlayerStats : MonoBehaviour
     public int INT = 5;
 
     [Header("Legacy Weapon")]
-    [Tooltip("기존 코드 호환용 무기 공격력입니다.")]
+    [Tooltip("기존 프로젝트의 무기 공격력 필드입니다.")]
     public int weaponDamage = 0;
 
     [Header("Equipment Bonus - Runtime")]
-    [SerializeField] private int equipmentSTR;
-    [SerializeField] private int equipmentDEX;
-    [SerializeField] private int equipmentCON;
-    [SerializeField] private int equipmentINT;
-    [SerializeField] private int equipmentAttackPower;
-    [SerializeField] private int equipmentAccuracyBonus;
+    [SerializeField]
+    private int equipmentSTR;
 
-    public int TotalSTR => STR + equipmentSTR;
-    public int TotalDEX => DEX + equipmentDEX;
-    public int TotalCON => CON + equipmentCON;
-    public int TotalINT => INT + equipmentINT;
+    [SerializeField]
+    private int equipmentDEX;
 
-    public int EquipmentAttackPower =>
-        equipmentAttackPower;
+    [SerializeField]
+    private int equipmentCON;
 
-    public int EquipmentAccuracyBonus =>
-        equipmentAccuracyBonus;
+    [SerializeField]
+    private int equipmentINT;
 
-    public int MaxHealth => 50 + TotalCON * 10;
-    public int MaxHunger => 100 + TotalCON * 5;
-    public int MaxMental => 50 + TotalINT * 5;
+    [SerializeField]
+    private int equipmentAttackPower;
 
-    public int InventoryCapacity => 32;
+    [SerializeField]
+    private int equipmentAccuracyBonus;
+
+    public int TotalSTR
+    {
+        get
+        {
+            return STR + equipmentSTR;
+        }
+    }
+
+    public int TotalDEX
+    {
+        get
+        {
+            return DEX + equipmentDEX;
+        }
+    }
+
+    public int TotalCON
+    {
+        get
+        {
+            return CON + equipmentCON;
+        }
+    }
+
+    public int TotalINT
+    {
+        get
+        {
+            return INT + equipmentINT;
+        }
+    }
+
+    public int EquipmentAttackPower
+    {
+        get
+        {
+            return equipmentAttackPower;
+        }
+    }
+
+    public int EquipmentAccuracyBonus
+    {
+        get
+        {
+            return equipmentAccuracyBonus;
+        }
+    }
+
+    public int MaxHealth
+    {
+        get
+        {
+            return 50 + TotalCON * 10;
+        }
+    }
+
+    public int MaxHunger
+    {
+        get
+        {
+            return 100 + TotalCON * 5;
+        }
+    }
+
+    public int MaxMental
+    {
+        get
+        {
+            return 50 + TotalINT * 5;
+        }
+    }
+
+    public int InventoryCapacity
+    {
+        get
+        {
+            return 32;
+        }
+    }
 
     private const string STR_KEY = "STAT_STR";
     private const string DEX_KEY = "STAT_DEX";
@@ -46,13 +120,15 @@ public class PlayerStats : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null &&
+            Instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
+
         LoadStats();
     }
 
@@ -65,25 +141,34 @@ public class PlayerStats : MonoBehaviour
 
     public int GetFinalAttackDamage()
     {
-        int damage = GetBaseAttackDamage();
+        int damage =
+            GetBaseAttackDamage();
 
         if (PlayerResourceManager.Instance != null &&
             PlayerResourceManager.Instance
                 .IsMentalDamagePenaltyActive())
         {
             damage =
-                Mathf.RoundToInt(damage * 0.5f);
+                Mathf.RoundToInt(
+                    damage * 0.5f
+                );
         }
 
         return Mathf.Max(1, damage);
     }
 
-    public int GetFinalAccuracy(int enemyEvasion)
+    public int GetFinalAccuracy(
+        int enemyEvasion)
     {
         int accuracy =
-            100 - (enemyEvasion - TotalDEX * 3);
+            100 -
+            (
+                enemyEvasion -
+                TotalDEX * 3
+            );
 
-        accuracy += equipmentAccuracyBonus;
+        accuracy +=
+            equipmentAccuracyBonus;
 
         if (PlayerResourceManager.Instance != null)
         {
@@ -92,15 +177,28 @@ public class PlayerStats : MonoBehaviour
                     .GetMentalAccuracyPenalty();
         }
 
-        return Mathf.Clamp(accuracy, 10, 95);
+        return Mathf.Clamp(
+            accuracy,
+            10,
+            95
+        );
     }
 
-    public int GetFinalEvasion(int enemyAccuracy)
+    public int GetFinalEvasion(
+        int enemyAccuracy)
     {
         int evasionChance =
-            100 - (enemyAccuracy - TotalDEX * 3);
+            100 -
+            (
+                enemyAccuracy -
+                TotalDEX * 3
+            );
 
-        return Mathf.Clamp(evasionChance, 5, 95);
+        return Mathf.Clamp(
+            evasionChance,
+            5,
+            95
+        );
     }
 
     public int GetRunSuccessPercent()
@@ -121,16 +219,27 @@ public class PlayerStats : MonoBehaviour
             equipmentDEX = 0;
             equipmentCON = 0;
             equipmentINT = 0;
+
             equipmentAttackPower = 0;
             equipmentAccuracyBonus = 0;
         }
         else
         {
-            equipmentSTR = modifier.str;
-            equipmentDEX = modifier.dex;
-            equipmentCON = modifier.con;
-            equipmentINT = modifier.intelligence;
-            equipmentAttackPower = modifier.attackPower;
+            equipmentSTR =
+                modifier.str;
+
+            equipmentDEX =
+                modifier.dex;
+
+            equipmentCON =
+                modifier.con;
+
+            equipmentINT =
+                modifier.intelligence;
+
+            equipmentAttackPower =
+                modifier.attackPower;
+
             equipmentAccuracyBonus =
                 modifier.accuracyBonus;
         }
@@ -148,6 +257,7 @@ public class PlayerStats : MonoBehaviour
     public void AddSTR()
     {
         STR++;
+
         SaveStats();
         ApplyStatChange();
     }
@@ -155,6 +265,7 @@ public class PlayerStats : MonoBehaviour
     public void SubSTR()
     {
         STR = Mathf.Max(0, STR - 1);
+
         SaveStats();
         ApplyStatChange();
     }
@@ -162,6 +273,7 @@ public class PlayerStats : MonoBehaviour
     public void AddDEX()
     {
         DEX++;
+
         SaveStats();
         ApplyStatChange();
     }
@@ -169,6 +281,7 @@ public class PlayerStats : MonoBehaviour
     public void SubDEX()
     {
         DEX = Mathf.Max(0, DEX - 1);
+
         SaveStats();
         ApplyStatChange();
     }
@@ -176,6 +289,7 @@ public class PlayerStats : MonoBehaviour
     public void AddCON()
     {
         CON++;
+
         SaveStats();
         ApplyStatChange();
     }
@@ -183,6 +297,7 @@ public class PlayerStats : MonoBehaviour
     public void SubCON()
     {
         CON = Mathf.Max(0, CON - 1);
+
         SaveStats();
         ApplyStatChange();
     }
@@ -190,6 +305,7 @@ public class PlayerStats : MonoBehaviour
     public void AddINT()
     {
         INT++;
+
         SaveStats();
         ApplyStatChange();
     }
@@ -197,6 +313,7 @@ public class PlayerStats : MonoBehaviour
     public void SubINT()
     {
         INT = Mathf.Max(0, INT - 1);
+
         SaveStats();
         ApplyStatChange();
     }
@@ -218,18 +335,53 @@ public class PlayerStats : MonoBehaviour
 
     private void SaveStats()
     {
-        PlayerPrefs.SetInt(STR_KEY, STR);
-        PlayerPrefs.SetInt(DEX_KEY, DEX);
-        PlayerPrefs.SetInt(CON_KEY, CON);
-        PlayerPrefs.SetInt(INT_KEY, INT);
+        PlayerPrefs.SetInt(
+            STR_KEY,
+            STR
+        );
+
+        PlayerPrefs.SetInt(
+            DEX_KEY,
+            DEX
+        );
+
+        PlayerPrefs.SetInt(
+            CON_KEY,
+            CON
+        );
+
+        PlayerPrefs.SetInt(
+            INT_KEY,
+            INT
+        );
+
         PlayerPrefs.Save();
     }
 
     private void LoadStats()
     {
-        STR = PlayerPrefs.GetInt(STR_KEY, STR);
-        DEX = PlayerPrefs.GetInt(DEX_KEY, DEX);
-        CON = PlayerPrefs.GetInt(CON_KEY, CON);
-        INT = PlayerPrefs.GetInt(INT_KEY, INT);
+        STR =
+            PlayerPrefs.GetInt(
+                STR_KEY,
+                STR
+            );
+
+        DEX =
+            PlayerPrefs.GetInt(
+                DEX_KEY,
+                DEX
+            );
+
+        CON =
+            PlayerPrefs.GetInt(
+                CON_KEY,
+                CON
+            );
+
+        INT =
+            PlayerPrefs.GetInt(
+                INT_KEY,
+                INT
+            );
     }
 }
