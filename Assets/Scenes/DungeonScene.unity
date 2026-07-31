@@ -1259,7 +1259,7 @@ MonoBehaviour:
   mentalDecreaseTurnInterval: 5
   mentalDecreaseAmount: 5
   hungerDecreaseTurnInterval: 5
-  hungerDecreaseAmount: 5
+  hungerDecreaseAmount: 70
 --- !u!1 &300726040
 GameObject:
   m_ObjectHideFlags: 0

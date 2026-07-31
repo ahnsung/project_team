@@ -780,4 +780,73 @@ public class InventoryManager : MonoBehaviour
                 .RefreshUI();
         }
     }
+
+
+    // =============================
+    // Save / Load
+    // =============================
+
+    public void ClearForLoad()
+    {
+        items.Clear();
+        grid = new InventoryItem[width, height];
+    }
+
+    public bool AddRestoredItem(InventoryItem item)
+    {
+        if (item == null || item.data == null)
+            return false;
+
+        EnsureGridCreated();
+
+        if (!CanPlaceItem(item, item.position, null))
+            return false;
+
+        if (!items.Contains(item))
+            items.Add(item);
+
+        PlaceItem(item, item.position);
+        return true;
+    }
+
+    public bool AddRestoredItemToEmptySpace(InventoryItem item)
+    {
+        if (item == null || item.data == null)
+            return false;
+
+        EnsureGridCreated();
+
+        if (!TryFindEmptyPosition(
+                item,
+                true,
+                out Vector2Int position,
+                out int rotation))
+        {
+            return false;
+        }
+
+        item.SetRotation(rotation);
+
+        if (!items.Contains(item))
+            items.Add(item);
+
+        PlaceItem(item, position);
+        return true;
+    }
+
+    public void FinishLoad()
+    {
+        RefreshGrid();
+        RefreshUI();
+    }
+
+    private void EnsureGridCreated()
+    {
+        if (grid == null ||
+            grid.GetLength(0) != width ||
+            grid.GetLength(1) != height)
+        {
+            grid = new InventoryItem[width, height];
+        }
+    }
 }

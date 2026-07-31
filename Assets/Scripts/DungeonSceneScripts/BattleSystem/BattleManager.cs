@@ -1,866 +1,645 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
-public class BattleManager : MonoBehaviour
+public class SaveManager : MonoBehaviour
 {
-    public static BattleManager Instance;
+    public static SaveManager Instance;
 
-    private enum BattleState
+    private const string GameplaySaveKey = "GameplaySaveData";
+
+    [Header("Debug")]
+    [SerializeField]
+    private bool printSaveLog = true;
+
+    private bool isLoading;
+
+    public bool IsLoading => isLoading;
+
+    [Serializable]
+    public class InventoryItemSaveData
     {
-        None,
-        PlayerTurn,
-        SelectingTarget,
-        EnemyTurn,
-        BattleEnd
+        public string uniqueId;
+        public int itemId;
+
+        public int positionX;
+        public int positionY;
+
+        public int rotation;
+        public int remainUseCount;
+        public int currentDurability;
+
+        public bool isEquipped;
+        public EquipmentSlotType equippedSlot;
     }
 
-    [Header("Cut In")]
-    public BattleAttackCutInController cutInController;
-
-    [Header("Player")]
-    public BattleUnit playerUnit;
-
-    [Header("Monster Spawn")]
-    public BattleMonsterData[] monsterPool;
-    public Transform enemyGroup;
-    public Transform[] enemySpawnPoints;
-
-    [Min(1)]
-    public int minEnemyCount = 1;
-
-    [Min(1)]
-    public int maxEnemyCount = 1;
-
-    [Header("UI")]
-    public BattleUIManager uiManager;
-    public GameObject encounterPanel;
-    public TextMeshProUGUI encounterText;
-
-    [Header("Floating Text")]
-    public TextMeshProUGUI floatingTextPrefab;
-    public Canvas worldCanvas;
-
-    [Header("Battle Timing")]
-    public float encounterMessageTime = 1f;
-    public float enemyAttackDelay = 0.6f;
-    public float afterHitDelay = 0.2f;
-    public float actionDelay = 0.6f;
-
-    [Header("Battle Setting")]
-    public int runSuccessPercent = 50;
-
-    [Header("Equipment Durability")]
-    [Min(0)]
-    public int weaponDurabilityCost = 10;
-
-    [Min(0)]
-    public int armorDurabilityCost = 10;
-
-    private BattleState state =
-        BattleState.None;
-
-    private bool battleRunning;
-
-    private readonly List<BattleUnit> enemies =
-        new List<BattleUnit>();
+    [Serializable]
+    public class GameplaySaveData
+    {
+        public List<InventoryItemSaveData> items =
+            new List<InventoryItemSaveData>();
+    }
 
     private void Awake()
     {
-        if (Instance != null &&
-            Instance != this)
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
         {
             Destroy(gameObject);
             return;
         }
 
-        Instance = this;
-    }
-
-    private void Start()
-    {
-        if (uiManager != null)
-            uiManager.HideBattleUI();
-
-        if (encounterPanel != null)
-            encounterPanel.SetActive(false);
-
-        if (enemyGroup != null)
-            enemyGroup.gameObject.SetActive(false);
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void OnDestroy()
     {
         if (Instance == this)
-            Instance = null;
-    }
-
-    public bool IsBattleRunning()
-    {
-        return battleRunning;
-    }
-
-    public bool CanPlayerUseItem()
-    {
-        return battleRunning &&
-               state == BattleState.PlayerTurn;
-    }
-
-    public bool CanPlayerSwapWeapon()
-    {
-        return battleRunning &&
-               state == BattleState.PlayerTurn;
-    }
-
-    public IEnumerator StartBattleEncounter()
-    {
-        if (battleRunning)
-            yield break;
-
-        battleRunning = true;
-        state = BattleState.None;
-
-        if (uiManager != null)
-            uiManager.HideBattleUI();
-
-        if (encounterPanel != null)
-            encounterPanel.SetActive(true);
-
-        if (encounterText != null)
-            encounterText.text = "전투 발생!";
-
-        yield return new WaitForSeconds(
-            encounterMessageTime
-        );
-
-        if (encounterPanel != null)
-            encounterPanel.SetActive(false);
-
-        SpawnEnemies();
-
-        if (enemies.Count == 0)
         {
-            Debug.LogError(
-                "[BattleManager] 생성된 몬스터가 없습니다."
-            );
-
-            EndBattleImmediately();
-            yield break;
-        }
-
-        StartBattle();
-    }
-
-    private void StartBattle()
-    {
-        state = BattleState.PlayerTurn;
-
-        if (uiManager != null)
-        {
-            uiManager.ShowBattleUI();
-            uiManager.ShowMainBattleMenu();
+            SceneManager.sceneLoaded -= OnSceneLoaded;
         }
     }
 
-    private void SpawnEnemies()
+    private void OnApplicationQuit()
     {
-        ClearEnemies();
-
-        if (enemyGroup != null)
-            enemyGroup.gameObject.SetActive(true);
-
-        if (monsterPool == null ||
-            monsterPool.Length == 0)
+        if (HasSave())
         {
-            Debug.LogError(
-                "[BattleManager] Monster Pool이 비어 있습니다."
-            );
-
-            return;
-        }
-
-        if (enemySpawnPoints == null ||
-            enemySpawnPoints.Length == 0)
-        {
-            Debug.LogError(
-                "[BattleManager] Enemy Spawn Points가 비어 있습니다."
-            );
-
-            return;
-        }
-
-        int safeMinimum =
-            Mathf.Max(1, minEnemyCount);
-
-        int safeMaximum =
-            Mathf.Max(safeMinimum, maxEnemyCount);
-
-        int count =
-            Random.Range(
-                safeMinimum,
-                safeMaximum + 1
-            );
-
-        count =
-            Mathf.Clamp(
-                count,
-                1,
-                enemySpawnPoints.Length
-            );
-
-        for (int i = 0; i < count; i++)
-        {
-            BattleMonsterData data =
-                GetRandomValidMonsterData();
-
-            if (data == null ||
-                data.monsterPrefab == null)
-            {
-                Debug.LogWarning(
-                    "[BattleManager] 사용할 수 있는 몬스터 데이터가 없습니다."
-                );
-
-                continue;
-            }
-
-            Transform spawnPoint =
-                enemySpawnPoints[i];
-
-            if (spawnPoint == null)
-            {
-                Debug.LogWarning(
-                    "[BattleManager] Enemy Spawn Point가 비어 있습니다."
-                );
-
-                continue;
-            }
-
-            GameObject enemyObject =
-                Instantiate(
-                    data.monsterPrefab,
-                    spawnPoint.position,
-                    Quaternion.identity,
-                    enemyGroup
-                );
-
-            BattleUnit unit =
-                enemyObject.GetComponent<BattleUnit>();
-
-            if (unit == null)
-                unit = enemyObject.AddComponent<BattleUnit>();
-
-            unit.Setup(
-                data.monsterName,
-                data.maxHP,
-                data.attackPower,
-                data.accuracy,
-                data.evasion
-            );
-
-            BattleEnemyClick enemyClick =
-                enemyObject.GetComponent<BattleEnemyClick>();
-
-            if (enemyClick == null)
-            {
-                enemyClick =
-                    enemyObject.AddComponent<BattleEnemyClick>();
-            }
-
-            enemyClick.enemyUnit = unit;
-            enemyClick.battleManager = this;
-
-            Collider2D collider =
-                enemyObject.GetComponent<Collider2D>();
-
-            if (collider == null)
-            {
-                BoxCollider2D boxCollider =
-                    enemyObject.AddComponent<BoxCollider2D>();
-
-                boxCollider.isTrigger = true;
-            }
-
-            enemies.Add(unit);
+            SaveGameplayData();
         }
     }
 
-    private BattleMonsterData GetRandomValidMonsterData()
+    private void OnApplicationPause(bool pauseStatus)
     {
-        if (monsterPool == null ||
-            monsterPool.Length == 0)
+        if (pauseStatus && HasSave())
         {
-            return null;
-        }
-
-        List<BattleMonsterData> validData =
-            new List<BattleMonsterData>();
-
-        foreach (
-            BattleMonsterData data
-            in monsterPool)
-        {
-            if (data != null &&
-                data.monsterPrefab != null)
-            {
-                validData.Add(data);
-            }
-        }
-
-        if (validData.Count == 0)
-            return null;
-
-        return validData[
-            Random.Range(0, validData.Count)
-        ];
-    }
-
-    private void ClearEnemies()
-    {
-        enemies.Clear();
-
-        if (enemyGroup == null)
-            return;
-
-        for (
-            int i = enemyGroup.childCount - 1;
-            i >= 0;
-            i--)
-        {
-            Transform child =
-                enemyGroup.GetChild(i);
-
-            if (child != null)
-                Destroy(child.gameObject);
+            SaveGameplayData();
         }
     }
 
-    public void OnClickBattleButton()
+    private void OnSceneLoaded(
+        Scene scene,
+        LoadSceneMode mode)
     {
-        if (state != BattleState.PlayerTurn)
-            return;
-
-        if (uiManager != null)
-            uiManager.ShowActionMenu();
-    }
-
-    public void OnClickAttackButton()
-    {
-        if (state != BattleState.PlayerTurn)
-            return;
-
-        state = BattleState.SelectingTarget;
-    }
-
-    public void OnClickRunButton()
-    {
-        if (state != BattleState.PlayerTurn)
+        if (!HasGameplaySave())
             return;
 
         StartCoroutine(
-            RunRoutine()
+            LoadGameplayDataAfterSceneReady()
         );
     }
 
-    public void HoverEnemy(
-        BattleUnit enemy)
+    private IEnumerator
+        LoadGameplayDataAfterSceneReady()
     {
-        if (state != BattleState.SelectingTarget)
-            return;
+        yield return null;
+        yield return null;
 
-        if (!IsValidLivingEnemy(enemy))
-            return;
+        float timeout = 3f;
+        float elapsed = 0f;
 
-        enemy.SetArrow(true);
-    }
-
-    public void ExitHoverEnemy(
-        BattleUnit enemy)
-    {
-        if (enemy == null)
-            return;
-
-        enemy.SetArrow(false);
-    }
-
-    public void ClickEnemy(
-        BattleUnit enemy)
-    {
-        if (state != BattleState.SelectingTarget)
-            return;
-
-        if (!IsValidLivingEnemy(enemy))
-            return;
-
-        StartCoroutine(
-            PlayerAttackRoutine(enemy)
-        );
-    }
-
-    public void OnPlayerUsedItem()
-    {
-        if (!battleRunning)
-            return;
-
-        if (state != BattleState.PlayerTurn)
-            return;
-
-        StartCoroutine(
-            PlayerUseItemRoutine()
-        );
-    }
-
-    private IEnumerator PlayerUseItemRoutine()
-    {
-        state = BattleState.EnemyTurn;
-
-        if (uiManager != null)
-            uiManager.HideBattleUI();
-
-        yield return StartCoroutine(
-            EnemyTurnRoutine(false)
-        );
-
-        if (DungeonManager.Instance != null)
+        while (elapsed < timeout)
         {
-            DungeonManager.Instance
-                .AddTurn("아이템 사용");
-        }
-
-        ReturnToPlayerTurnIfPossible();
-    }
-
-    private IEnumerator PlayerAttackRoutine(
-        BattleUnit target)
-    {
-        state = BattleState.EnemyTurn;
-
-        ClearEnemyArrows();
-
-        int playerAccuracy =
-            PlayerStats.Instance != null
-                ? PlayerStats.Instance
-                    .GetFinalAccuracy(target.evasion)
-                : playerUnit != null
-                    ? playerUnit.accuracy
-                    : 90;
-
-        bool hit =
-            Random.Range(0, 100) <
-            playerAccuracy;
-
-        if (cutInController != null &&
-            playerUnit != null)
-        {
-            yield return cutInController
-                .PlayPlayerAttackCutIn(
-                    playerUnit,
-                    target
-                );
-        }
-        else
-        {
-            if (playerUnit != null)
-                playerUnit.PlayAttackAnimation();
-
-            yield return new WaitForSeconds(
-                0.6f
-            );
-        }
-
-        if (hit)
-        {
-            int damage =
-                PlayerStats.Instance != null
-                    ? PlayerStats.Instance
-                        .GetFinalAttackDamage()
-                    : playerUnit != null
-                        ? Mathf.Max(
-                            1,
-                            playerUnit.attackPower
-                        )
-                        : 1;
-
-            target.TakeDamage(damage);
-
-            ShowFloatingText(
-                target.transform.position,
-                damage.ToString()
-            );
-        }
-        else
-        {
-            ShowFloatingText(
-                target.transform.position,
-                "MISS"
-            );
-        }
-
-        ConsumePlayerWeaponDurability();
-
-        yield return new WaitForSeconds(
-            afterHitDelay
-        );
-
-        RemoveDeadEnemies();
-
-        if (AllEnemiesDead())
-        {
-            if (DungeonManager.Instance != null)
+            if (InventoryManager.Instance != null &&
+                EquipmentManager.Instance != null &&
+                ItemDatabase.Instance != null)
             {
-                DungeonManager.Instance
-                    .AddTurn("전투 승리");
-            }
-
-            EndBattle();
-            yield break;
-        }
-
-        yield return StartCoroutine(
-            EnemyTurnRoutine(true)
-        );
-    }
-
-    private IEnumerator EnemyTurnRoutine(
-        bool addTurnAtEnd)
-    {
-        state = BattleState.EnemyTurn;
-
-        RemoveDeadEnemies();
-
-        BattleUnit[] aliveEnemies =
-            enemies.ToArray();
-
-        foreach (
-            BattleUnit enemy
-            in aliveEnemies)
-        {
-            if (!IsValidLivingEnemy(enemy))
-                continue;
-
-            if (cutInController != null &&
-                playerUnit != null)
-            {
-                yield return cutInController
-                    .PlayEnemyAttackCutIn(
-                        enemy,
-                        playerUnit
-                    );
-            }
-            else
-            {
-                enemy.PlayAttackAnimation();
-
-                yield return new WaitForSeconds(
-                    enemyAttackDelay
-                );
-            }
-
-            bool hit =
-                RollEnemyHit(enemy.accuracy);
-
-            if (hit)
-            {
-                int damage =
-                    Mathf.Max(
-                        1,
-                        enemy.attackPower
-                    );
-
-                if (PlayerResourceManager.Instance != null &&
-                    PlayerResourceManager.Instance
-                        .IsHungerAllDecreasePenaltyActive())
-                {
-                    damage =
-                        Mathf.RoundToInt(
-                            damage * 1.5f
-                        );
-                }
-
-                if (playerUnit != null)
-                    playerUnit.TakeDamage(damage);
-
-                if (PlayerResourceManager.Instance != null)
-                {
-                    PlayerResourceManager.Instance
-                        .ChangeHealth(
-                            -damage,
-                            "적 공격 피해"
-                        );
-                }
-
-                if (playerUnit != null)
-                {
-                    ShowFloatingText(
-                        playerUnit.transform.position,
-                        damage.ToString()
-                    );
-                }
-
-                ConsumePlayerArmorDurability();
-            }
-            else
-            {
-                if (playerUnit != null)
-                {
-                    ShowFloatingText(
-                        playerUnit.transform.position,
-                        "MISS"
-                    );
-                }
-            }
-
-            yield return new WaitForSeconds(
-                afterHitDelay
-            );
-
-            if (playerUnit != null &&
-                playerUnit.IsDead)
-            {
-                EndBattle();
+                LoadGameplayData();
                 yield break;
             }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
         }
-
-        RemoveDeadEnemies();
-
-        if (addTurnAtEnd &&
-            DungeonManager.Instance != null)
-        {
-            DungeonManager.Instance
-                .AddTurn("전투 라운드 종료");
-        }
-
-        ReturnToPlayerTurnIfPossible();
     }
 
-    private void ConsumePlayerWeaponDurability()
+    // =============================
+    // 새 게임
+    // =============================
+
+    public void CreateNewSave(
+        int characterID,
+        string playerName)
     {
-        if (EquipmentManager.Instance == null)
+        PlayerPrefs.SetInt(
+            "HasSave",
+            1
+        );
+
+        PlayerPrefs.SetInt(
+            "CutscenePlayed",
+            1
+        );
+
+        PlayerPrefs.SetInt(
+            "SelectedCharacter",
+            characterID
+        );
+
+        PlayerPrefs.SetString(
+            "PlayerName",
+            playerName
+        );
+
+        // 새 게임에서는 이전 인벤토리와 장비 데이터를 제거한다.
+        PlayerPrefs.DeleteKey(
+            GameplaySaveKey
+        );
+
+        PlayerPrefs.Save();
+    }
+
+    // =============================
+    // 기본 저장 정보
+    // =============================
+
+    public bool HasSave()
+    {
+        return PlayerPrefs.GetInt(
+            "HasSave",
+            0
+        ) == 1;
+    }
+
+    public bool HasPlayedCutscene()
+    {
+        return PlayerPrefs.GetInt(
+            "CutscenePlayed",
+            0
+        ) == 1;
+    }
+
+    public int GetSelectedCharacter()
+    {
+        return PlayerPrefs.GetInt(
+            "SelectedCharacter",
+            -1
+        );
+    }
+
+    public string GetPlayerName()
+    {
+        return PlayerPrefs.GetString(
+            "PlayerName",
+            ""
+        );
+    }
+
+    // =============================
+    // 게임플레이 저장
+    // =============================
+
+    public bool HasGameplaySave()
+    {
+        return PlayerPrefs.HasKey(
+            GameplaySaveKey
+        );
+    }
+
+    public void SaveGameplayData()
+    {
+        if (isLoading)
             return;
 
-        EquipmentManager.Instance
-            .ConsumeMainWeaponDurability(
-                weaponDurabilityCost
-            );
-    }
+        InventoryManager inventory =
+            InventoryManager.Instance;
 
-    private void ConsumePlayerArmorDurability()
-    {
-        if (EquipmentManager.Instance == null)
-            return;
+        EquipmentManager equipment =
+            EquipmentManager.Instance;
 
-        EquipmentManager.Instance
-            .ConsumeArmorDurability(
-                armorDurabilityCost
-            );
-    }
-
-    private void ReturnToPlayerTurnIfPossible()
-    {
-        if (!battleRunning ||
-            state == BattleState.BattleEnd)
+        if (inventory == null ||
+            equipment == null)
         {
             return;
         }
 
-        state = BattleState.PlayerTurn;
+        GameplaySaveData saveData =
+            new GameplaySaveData();
 
-        if (uiManager != null)
+        HashSet<string> savedUniqueIds =
+            new HashSet<string>();
+
+        foreach (
+            InventoryItem item
+            in inventory.items)
         {
-            uiManager.ShowBattleUI();
-            uiManager.ShowMainBattleMenu();
+            AddItemToSaveData(
+                saveData,
+                savedUniqueIds,
+                item,
+                false,
+                EquipmentSlotType.MainWeapon
+            );
+        }
+
+        AddItemToSaveData(
+            saveData,
+            savedUniqueIds,
+            equipment.Head,
+            true,
+            EquipmentSlotType.Head
+        );
+
+        AddItemToSaveData(
+            saveData,
+            savedUniqueIds,
+            equipment.Armor,
+            true,
+            EquipmentSlotType.Armor
+        );
+
+        AddItemToSaveData(
+            saveData,
+            savedUniqueIds,
+            equipment.Shoes,
+            true,
+            EquipmentSlotType.Shoes
+        );
+
+        AddItemToSaveData(
+            saveData,
+            savedUniqueIds,
+            equipment.MainWeapon,
+            true,
+            EquipmentSlotType.MainWeapon
+        );
+
+        AddItemToSaveData(
+            saveData,
+            savedUniqueIds,
+            equipment.SubWeapon,
+            true,
+            EquipmentSlotType.SubWeapon
+        );
+
+        string json =
+            JsonUtility.ToJson(
+                saveData
+            );
+
+        PlayerPrefs.SetString(
+            GameplaySaveKey,
+            json
+        );
+
+        PlayerPrefs.Save();
+
+        if (printSaveLog)
+        {
+            Debug.Log(
+                $"[SaveManager] 저장 완료: " +
+                $"{saveData.items.Count}개 아이템"
+            );
         }
     }
 
-    private IEnumerator RunRoutine()
+    private void AddItemToSaveData(
+        GameplaySaveData saveData,
+        HashSet<string> savedUniqueIds,
+        InventoryItem item,
+        bool isEquipped,
+        EquipmentSlotType equippedSlot)
     {
-        state = BattleState.EnemyTurn;
-
-        int finalRunPercent =
-            PlayerStats.Instance != null
-                ? PlayerStats.Instance
-                    .GetRunSuccessPercent()
-                : runSuccessPercent;
-
-        int roll =
-            Random.Range(0, 100);
-
-        if (roll < finalRunPercent)
+        if (item == null ||
+            item.data == null)
         {
-            yield return new WaitForSeconds(
-                actionDelay
+            return;
+        }
+
+        if (string.IsNullOrEmpty(
+                item.uniqueId))
+        {
+            item.uniqueId =
+                Guid.NewGuid().ToString();
+        }
+
+        if (savedUniqueIds.Contains(
+                item.uniqueId))
+        {
+            Debug.LogWarning(
+                "[SaveManager] 중복 아이템 ID 발견: " +
+                item.uniqueId
             );
 
-            if (DungeonManager.Instance != null)
+            return;
+        }
+
+        savedUniqueIds.Add(
+            item.uniqueId
+        );
+
+        InventoryItemSaveData itemData =
+            new InventoryItemSaveData
             {
-                DungeonManager.Instance
-                    .AddTurn("도망 성공");
+                uniqueId =
+                    item.uniqueId,
+
+                itemId =
+                    item.data.id,
+
+                positionX =
+                    item.position.x,
+
+                positionY =
+                    item.position.y,
+
+                rotation =
+                    item.rotation,
+
+                remainUseCount =
+                    item.remainUseCount,
+
+                currentDurability =
+                    item.currentDurability,
+
+                isEquipped =
+                    isEquipped,
+
+                equippedSlot =
+                    equippedSlot
+            };
+
+        saveData.items.Add(
+            itemData
+        );
+    }
+
+    // =============================
+    // 게임플레이 불러오기
+    // =============================
+
+    public void LoadGameplayData()
+    {
+        if (isLoading)
+            return;
+
+        if (!HasGameplaySave())
+            return;
+
+        InventoryManager inventory =
+            InventoryManager.Instance;
+
+        EquipmentManager equipment =
+            EquipmentManager.Instance;
+
+        ItemDatabase itemDatabase =
+            ItemDatabase.Instance;
+
+        if (inventory == null ||
+            equipment == null ||
+            itemDatabase == null)
+        {
+            Debug.LogWarning(
+                "[SaveManager] 아직 저장 데이터를 " +
+                "불러올 준비가 되지 않았습니다."
+            );
+
+            return;
+        }
+
+        string json =
+            PlayerPrefs.GetString(
+                GameplaySaveKey,
+                ""
+            );
+
+        if (string.IsNullOrEmpty(json))
+            return;
+
+        GameplaySaveData saveData;
+
+        try
+        {
+            saveData =
+                JsonUtility.FromJson<
+                    GameplaySaveData
+                >(json);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError(
+                "[SaveManager] 저장 데이터 해석 실패: " +
+                exception.Message
+            );
+
+            return;
+        }
+
+        if (saveData == null)
+            return;
+
+        if (saveData.items == null)
+        {
+            saveData.items =
+                new List<InventoryItemSaveData>();
+        }
+
+        isLoading = true;
+
+        inventory.ClearForLoad();
+        equipment.ClearEquipmentForLoad();
+
+        Dictionary<string, InventoryItem>
+            restoredItems =
+                new Dictionary<
+                    string,
+                    InventoryItem
+                >();
+
+        foreach (
+            InventoryItemSaveData savedItem
+            in saveData.items)
+        {
+            if (savedItem == null)
+                continue;
+
+            ItemData itemData =
+                itemDatabase.GetItem(
+                    savedItem.itemId
+                );
+
+            if (itemData == null)
+            {
+                Debug.LogWarning(
+                    "[SaveManager] 존재하지 않는 " +
+                    "아이템 ID를 건너뜁니다: " +
+                    savedItem.itemId
+                );
+
+                continue;
             }
 
-            EndBattle();
-        }
-        else
-        {
-            yield return new WaitForSeconds(
-                actionDelay
-            );
-
-            yield return StartCoroutine(
-                EnemyTurnRoutine(true)
-            );
-        }
-    }
-
-    private bool RollEnemyHit(
-        int enemyAccuracy)
-    {
-        if (PlayerStats.Instance == null)
-        {
-            return Random.Range(0, 100) <
-                   Mathf.Clamp(
-                       enemyAccuracy,
-                       10,
-                       95
-                   );
-        }
-
-        int playerEvasionChance =
-            PlayerStats.Instance
-                .GetFinalEvasion(
-                    enemyAccuracy
+            InventoryItem restoredItem =
+                new InventoryItem(
+                    itemData
                 );
 
-        int enemyHitChance =
-            100 - playerEvasionChance;
+            restoredItem.uniqueId =
+                string.IsNullOrEmpty(
+                    savedItem.uniqueId
+                )
+                    ? Guid.NewGuid().ToString()
+                    : savedItem.uniqueId;
 
-        enemyHitChance =
-            Mathf.Clamp(
-                enemyHitChance,
-                5,
-                95
+            restoredItem.position =
+                new Vector2Int(
+                    savedItem.positionX,
+                    savedItem.positionY
+                );
+
+            restoredItem.SetRotation(
+                savedItem.rotation
             );
 
-        return Random.Range(0, 100) <
-               enemyHitChance;
-    }
+            restoredItem.remainUseCount =
+                Mathf.Max(
+                    0,
+                    savedItem.remainUseCount
+                );
 
-    private bool IsValidLivingEnemy(
-        BattleUnit enemy)
-    {
-        return enemy != null &&
-               !enemy.IsDead &&
-               enemy.gameObject.activeInHierarchy;
-    }
+            if (itemData.IsEquipment)
+            {
+                restoredItem.currentDurability =
+                    Mathf.Clamp(
+                        savedItem.currentDurability,
+                        0,
+                        itemData.SafeMaxDurability
+                    );
+            }
+            else
+            {
+                restoredItem.currentDurability = 0;
+            }
 
-    private void RemoveDeadEnemies()
-    {
-        enemies.RemoveAll(
-            enemy =>
-                enemy == null ||
-                enemy.IsDead ||
-                !enemy.gameObject.activeInHierarchy
-        );
-    }
+            restoredItems[
+                restoredItem.uniqueId
+            ] = restoredItem;
+        }
 
-    private bool AllEnemiesDead()
-    {
-        RemoveDeadEnemies();
-
-        return enemies.Count == 0;
-    }
-
-    private void EndBattle()
-    {
-        if (state == BattleState.BattleEnd)
-            return;
-
-        state = BattleState.BattleEnd;
-
-        ClearEnemyArrows();
-
-        StartCoroutine(
-            EndBattleRoutine()
-        );
-    }
-
-    private IEnumerator EndBattleRoutine()
-    {
-        yield return new WaitForSeconds(1f);
-
-        ClearEnemies();
-
-        if (enemyGroup != null)
-            enemyGroup.gameObject.SetActive(false);
-
-        if (uiManager != null)
-            uiManager.HideBattleUI();
-
-        state = BattleState.None;
-        battleRunning = false;
-    }
-
-    private void EndBattleImmediately()
-    {
-        ClearEnemies();
-
-        if (enemyGroup != null)
-            enemyGroup.gameObject.SetActive(false);
-
-        if (uiManager != null)
-            uiManager.HideBattleUI();
-
-        state = BattleState.None;
-        battleRunning = false;
-    }
-
-    private void ClearEnemyArrows()
-    {
+        // 먼저 인벤토리에 있는 아이템만 배치한다.
         foreach (
-            BattleUnit enemy
-            in enemies)
+            InventoryItemSaveData savedItem
+            in saveData.items)
         {
-            if (enemy != null)
-                enemy.SetArrow(false);
+            if (savedItem == null ||
+                savedItem.isEquipped)
+            {
+                continue;
+            }
+
+            if (!restoredItems.TryGetValue(
+                    savedItem.uniqueId,
+                    out InventoryItem restoredItem))
+            {
+                continue;
+            }
+
+            bool restored =
+                inventory.AddRestoredItem(
+                    restoredItem
+                );
+
+            if (!restored)
+            {
+                Debug.LogWarning(
+                    "[SaveManager] 인벤토리 복구 실패: " +
+                    restoredItem.data.itemName
+                );
+            }
+        }
+
+        // 그다음 장착 아이템을 슬롯에 직접 연결한다.
+        foreach (
+            InventoryItemSaveData savedItem
+            in saveData.items)
+        {
+            if (savedItem == null ||
+                !savedItem.isEquipped)
+            {
+                continue;
+            }
+
+            if (!restoredItems.TryGetValue(
+                    savedItem.uniqueId,
+                    out InventoryItem restoredItem))
+            {
+                continue;
+            }
+
+            bool restored =
+                equipment.RestoreEquipmentForLoad(
+                    savedItem.equippedSlot,
+                    restoredItem
+                );
+
+            if (!restored)
+            {
+                Debug.LogWarning(
+                    "[SaveManager] 장비 복구 실패: " +
+                    restoredItem.data.itemName
+                );
+
+                inventory
+                    .AddRestoredItemToEmptySpace(
+                        restoredItem
+                    );
+            }
+        }
+
+        inventory.FinishLoad();
+        equipment.FinishEquipmentLoad();
+
+        isLoading = false;
+
+        if (printSaveLog)
+        {
+            Debug.Log(
+                $"[SaveManager] 불러오기 완료: " +
+                $"{saveData.items.Count}개 아이템"
+            );
         }
     }
 
-    private void ShowFloatingText(
-        Vector3 worldPosition,
-        string text)
+    // =============================
+    // 저장 삭제
+    // =============================
+
+    public void DeleteGameplaySave()
     {
-        if (floatingTextPrefab == null ||
-            worldCanvas == null)
-        {
-            return;
-        }
-
-        TextMeshProUGUI floatingText =
-            Instantiate(
-                floatingTextPrefab,
-                worldCanvas.transform
-            );
-
-        floatingText.text = text;
-
-        Camera mainCamera =
-            Camera.main;
-
-        if (mainCamera != null)
-        {
-            Vector3 screenPosition =
-                mainCamera.WorldToScreenPoint(
-                    worldPosition +
-                    Vector3.up * 1.5f
-                );
-
-            floatingText.transform.position =
-                screenPosition;
-        }
-
-        Destroy(
-            floatingText.gameObject,
-            0.8f
+        PlayerPrefs.DeleteKey(
+            GameplaySaveKey
         );
+
+        PlayerPrefs.Save();
+    }
+
+    public void DeleteSave()
+    {
+        PlayerPrefs.DeleteKey(
+            "HasSave"
+        );
+
+        PlayerPrefs.DeleteKey(
+            "CutscenePlayed"
+        );
+
+        PlayerPrefs.DeleteKey(
+            "SelectedCharacter"
+        );
+
+        PlayerPrefs.DeleteKey(
+            "PlayerName"
+        );
+
+        PlayerPrefs.DeleteKey(
+            GameplaySaveKey
+        );
+
+        PlayerPrefs.Save();
     }
 }

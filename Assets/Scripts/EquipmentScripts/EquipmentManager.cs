@@ -591,4 +591,63 @@ public class EquipmentManager : MonoBehaviour
                 .RefreshUI();
         }
     }
+
+
+    // =============================
+    // Save / Load
+    // =============================
+
+    public void ClearEquipmentForLoad()
+    {
+        head = null;
+        armor = null;
+        shoes = null;
+        mainWeapon = null;
+        subWeapon = null;
+
+        RecalculateEquipmentStats();
+    }
+
+    public bool RestoreEquipmentForLoad(
+        EquipmentSlotType slot,
+        InventoryItem item)
+    {
+        if (item == null ||
+            item.data == null ||
+            !item.data.IsEquipment)
+        {
+            return false;
+        }
+
+        if (!IsCompatible(item.data, slot))
+        {
+            Debug.LogWarning(
+                "[EquipmentManager] 장비 부위가 일치하지 않습니다: " +
+                item.data.itemName +
+                " / " +
+                slot
+            );
+
+            return false;
+        }
+
+        if (GetEquippedItem(slot) != null)
+        {
+            Debug.LogWarning(
+                "[EquipmentManager] 동일 슬롯에 중복 장비 데이터가 있습니다: " +
+                slot
+            );
+
+            return false;
+        }
+
+        SetEquippedItem(slot, item);
+        return true;
+    }
+
+    public void FinishEquipmentLoad()
+    {
+        RecalculateEquipmentStats();
+        NotifyChanged();
+    }
 }
