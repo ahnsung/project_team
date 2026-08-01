@@ -29,6 +29,28 @@ public class InventoryManager : MonoBehaviour
 
         Instance = this;
 
+        if (items == null)
+        {
+            items =
+                new List<InventoryItem>();
+        }
+
+        int removedCount =
+            items.RemoveAll(
+                item =>
+                    item == null ||
+                    item.data == null ||
+                    item.data.id <= 0
+            );
+
+        if (removedCount > 0)
+        {
+            Debug.LogWarning(
+                "[InventoryManager] 씬에 저장돼 있던 " +
+                $"잘못된 빈 아이템 {removedCount}개를 제거했습니다."
+            );
+        }
+
         grid =
             new InventoryItem[
                 width,
@@ -707,13 +729,17 @@ public class InventoryManager : MonoBehaviour
                 height
             ];
 
+        items.RemoveAll(
+            item =>
+                item == null ||
+                item.data == null ||
+                item.data.id <= 0
+        );
+
         foreach (
             InventoryItem item
             in items)
         {
-            if (item == null)
-                continue;
-
             if (CanPlaceItem(
                 item,
                 item.position,
@@ -727,7 +753,7 @@ public class InventoryManager : MonoBehaviour
             else
             {
                 Debug.LogWarning(
-                    $"{item.data?.itemName}의 " +
+                    $"{item.data.itemName}의 " +
                     "저장 위치가 현재 인벤토리 범위와 맞지 않습니다."
                 );
             }

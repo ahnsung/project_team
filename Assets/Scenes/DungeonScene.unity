@@ -1129,6 +1129,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f97fa97cd0c65a34d94f2f3e42c2d0f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lobbySceneName: LobbyScene
+  blockExitDuringBattle: 1
 --- !u!1 &276679172
 GameObject:
   m_ObjectHideFlags: 0
@@ -2590,6 +2592,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f97fa97cd0c65a34d94f2f3e42c2d0f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lobbySceneName: LobbyScene
+  blockExitDuringBattle: 1
 --- !u!1 &542617773
 GameObject:
   m_ObjectHideFlags: 0
