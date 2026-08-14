@@ -1713,7 +1713,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -3812983695708569335, guid: 9e382c0297bdee04fa4db181cc2a41c3, type: 3}
+  m_Sprite: {fileID: -3812983695708569335, guid: 58aa9020f538085428cf38846b0995ab, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1907,6 +1907,7 @@ MonoBehaviour:
     position: {x: 0, y: 0}
     rotation: 0
     currentDurability: 0
+  autoSaveEquipment: 1
 --- !u!1 &440802101
 GameObject:
   m_ObjectHideFlags: 0
@@ -3149,7 +3150,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 3245496157587252907, guid: 5cefdf0124ff87d44a39feac5036fce8, type: 3}
+  m_Sprite: {fileID: 3245496157587252907, guid: 2f508b18fd7a3d447961c15aaee5e80f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
