@@ -58,6 +58,16 @@ public class BattleManager : MonoBehaviour
     [Min(0)]
     public int armorDurabilityCost = 10;
 
+    [Header("Guard Status")]
+    [Range(1, 100)]
+    public int guardDamageReductionPercent = 50;
+
+    [Min(1)]
+    public int guardArmorDurabilityMultiplier = 2;
+
+    private const int GuardStatusId = 9001;
+    private const int GuardStunStatusId = 9002;
+
     private BattleState state =
         BattleState.None;
 
@@ -100,7 +110,6 @@ public class BattleManager : MonoBehaviour
     {
         return battleRunning;
     }
-
     public bool CanPlayerUseItem()
     {
         return battleRunning &&
@@ -258,6 +267,15 @@ public class BattleManager : MonoBehaviour
                 data.evasion
             );
 
+            StatusEffectController enemyStatusController =
+                enemyObject.GetComponent<StatusEffectController>();
+
+            if (enemyStatusController == null)
+            {
+                enemyStatusController =
+                    enemyObject.AddComponent<StatusEffectController>();
+            }
+
             BattleEnemyClick enemyClick =
                 enemyObject.GetComponent<BattleEnemyClick>();
 
@@ -352,6 +370,35 @@ public class BattleManager : MonoBehaviour
         state = BattleState.SelectingTarget;
     }
 
+    public void OnClickGuardButton()
+    {
+        if (!battleRunning ||
+            state != BattleState.PlayerTurn)
+        {
+            return;
+        }
+
+        StatusEffectController playerStatusController =
+            GetPlayerStatusController();
+
+        if (playerStatusController == null)
+        {
+            Debug.LogError(
+                "[BattleManager] 플레이어 StatusEffectController가 없습니다."
+            );
+
+            return;
+        }
+
+        playerStatusController.AddStatusEffect(
+            CreateGuardStatusData()
+        );
+
+        StartCoroutine(
+            PlayerGuardRoutine()
+        );
+    }
+
     public void OnClickRunButton()
     {
         if (state != BattleState.PlayerTurn)
@@ -410,6 +457,24 @@ public class BattleManager : MonoBehaviour
         );
     }
 
+    private IEnumerator PlayerGuardRoutine()
+    {
+        state = BattleState.EnemyTurn;
+
+        ClearEnemyArrows();
+
+        if (uiManager != null)
+            uiManager.HideBattleUI();
+
+        Debug.Log(
+            "[BattleManager] 방어 사용 - 이번 적 팀 공격에 방어 효과 적용"
+        );
+
+        yield return StartCoroutine(
+            EnemyTurnRoutine(true)
+        );
+    }
+
     private IEnumerator PlayerUseItemRoutine()
     {
         state = BattleState.EnemyTurn;
@@ -431,11 +496,24 @@ public class BattleManager : MonoBehaviour
     }
 
     private IEnumerator PlayerAttackRoutine(
-        BattleUnit target)
+    BattleUnit target)
     {
         state = BattleState.EnemyTurn;
 
         ClearEnemyArrows();
+
+        // ==========================================
+        // 플레이어 상태이상 Controller
+        // ==========================================
+
+        StatusEffectController playerStatus =
+            playerUnit != null
+                ? playerUnit.GetComponent<StatusEffectController>()
+                : null;
+
+        // ==========================================
+        // 명중률 계산
+        // ==========================================
 
         int playerAccuracy =
             PlayerStats.Instance != null
@@ -445,9 +523,33 @@ public class BattleManager : MonoBehaviour
                     ? playerUnit.accuracy
                     : 90;
 
+        // 상태이상 명중률 보정
+        if (playerStatus != null)
+        {
+            playerAccuracy +=
+                playerStatus.GetAccuracyBonus();
+        }
+
+        // 확률 안전 처리
+        playerAccuracy =
+            Mathf.Clamp(
+                playerAccuracy,
+                0,
+                100
+            );
+
         bool hit =
             Random.Range(0, 100) <
             playerAccuracy;
+
+        Debug.Log(
+            "[Battle] 플레이어 최종 명중률: " +
+            playerAccuracy
+        );
+
+        // ==========================================
+        // 공격 연출
+        // ==========================================
 
         if (cutInController != null &&
             playerUnit != null)
@@ -468,9 +570,13 @@ public class BattleManager : MonoBehaviour
             );
         }
 
+        // ==========================================
+        // 공격 적중
+        // ==========================================
+
         if (hit)
         {
-            int damage =
+            int baseDamage =
                 PlayerStats.Instance != null
                     ? PlayerStats.Instance
                         .GetFinalAttackDamage()
@@ -481,7 +587,63 @@ public class BattleManager : MonoBehaviour
                         )
                         : 1;
 
-            target.TakeDamage(damage);
+            // ======================================
+            // 공격력 상태이상
+            // ======================================
+
+            float attackMultiplier = 1f;
+
+            if (playerStatus != null)
+            {
+                attackMultiplier =
+                    playerStatus
+                        .GetAttackPowerMultiplier();
+            }
+
+            int damage =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        baseDamage *
+                        attackMultiplier
+                    )
+                );
+
+            // ======================================
+            // 적이 받는 피해 상태이상
+            // ======================================
+
+            StatusEffectController targetStatus =
+                target != null
+                    ? target.GetComponent<
+                        StatusEffectController>()
+                    : null;
+
+            if (targetStatus != null)
+            {
+                damage =
+                    Mathf.Max(
+                        1,
+                        Mathf.RoundToInt(
+                            damage *
+                            targetStatus
+                                .GetDamageTakenMultiplier()
+                        )
+                    );
+            }
+
+            Debug.Log(
+                "[Battle] 공격 데미지 계산: " +
+                baseDamage +
+                " x " +
+                attackMultiplier +
+                " = " +
+                damage
+            );
+
+            target.TakeDamage(
+                damage
+            );
 
             ShowFloatingText(
                 target.transform.position,
@@ -495,6 +657,10 @@ public class BattleManager : MonoBehaviour
                 "MISS"
             );
         }
+
+        // ==========================================
+        // 무기 내구도
+        // ==========================================
 
         ConsumePlayerWeaponDurability();
 
@@ -522,11 +688,14 @@ public class BattleManager : MonoBehaviour
     }
 
     private IEnumerator EnemyTurnRoutine(
-        bool addTurnAtEnd)
+    bool addTurnAtEnd)
     {
         state = BattleState.EnemyTurn;
 
         RemoveDeadEnemies();
+
+        StatusEffectController playerStatusController =
+            GetPlayerStatusController();
 
         BattleUnit[] aliveEnemies =
             enemies.ToArray();
@@ -537,6 +706,57 @@ public class BattleManager : MonoBehaviour
         {
             if (!IsValidLivingEnemy(enemy))
                 continue;
+
+            StatusEffectController enemyStatusController =
+                GetOrAddStatusController(enemy);
+
+            // ==========================================
+            // 적 턴 시작 상태이상 처리
+            // ==========================================
+
+            if (enemyStatusController != null)
+            {
+                enemyStatusController.ProcessTiming(
+                    StatusEffectTiming.SelfTurnStart
+                );
+            }
+
+            bool enemyIsStunned =
+                enemyStatusController != null &&
+                enemyStatusController.HasStatusEffect(
+                    StatusEffectType.Stun
+                );
+
+            if (enemyIsStunned)
+            {
+                Debug.Log(
+                    "[BattleManager] " +
+                    enemy.unitName +
+                    "은(는) 기절하여 행동할 수 없습니다."
+                );
+
+                ShowFloatingText(
+                    enemy.transform.position,
+                    "STUN"
+                );
+
+                yield return new WaitForSeconds(
+                    actionDelay
+                );
+
+                if (enemyStatusController != null)
+                {
+                    enemyStatusController.ProcessTiming(
+                        StatusEffectTiming.SelfTurnEnd
+                    );
+                }
+
+                continue;
+            }
+
+            // ==========================================
+            // 적 공격 연출
+            // ==========================================
 
             if (cutInController != null &&
                 playerUnit != null)
@@ -556,16 +776,109 @@ public class BattleManager : MonoBehaviour
                 );
             }
 
+            // ==========================================
+            // 적 명중률 + 플레이어 회피 상태이상
+            // ==========================================
+
+            int finalEnemyAccuracy =
+                enemy.accuracy;
+
+            if (playerStatusController != null)
+            {
+                int evasionBonus =
+                    playerStatusController
+                        .GetEvasionBonus();
+
+                /*
+                 * 플레이어 EvasionUp
+                 * → 적 명중률 감소
+                 *
+                 * 플레이어 EvasionDown
+                 * → 적 명중률 증가
+                 */
+
+                finalEnemyAccuracy -=
+                    evasionBonus;
+            }
+
+            finalEnemyAccuracy =
+                Mathf.Clamp(
+                    finalEnemyAccuracy,
+                    0,
+                    100
+                );
+
+            Debug.Log(
+                "[BattleManager] 적 최종 명중률: " +
+                finalEnemyAccuracy
+            );
+
             bool hit =
-                RollEnemyHit(enemy.accuracy);
+                RollEnemyHit(
+                    finalEnemyAccuracy
+                );
+
+            // ==========================================
+            // Guard 확인
+            // ==========================================
+
+            bool guardWasActive =
+                playerStatusController != null &&
+                playerStatusController.HasStatusEffect(
+                    StatusEffectType.Guard
+                );
+
+            bool applyGuardStunAfterTurn =
+                false;
+
+            // ==========================================
+            // 적중
+            // ==========================================
 
             if (hit)
             {
+                // --------------------------------------
+                // 적 기본 공격력
+                // --------------------------------------
+
                 int damage =
                     Mathf.Max(
                         1,
                         enemy.attackPower
                     );
+
+                // --------------------------------------
+                // 적 공격력 상태이상
+                // --------------------------------------
+
+                if (enemyStatusController != null)
+                {
+                    float attackMultiplier =
+                        enemyStatusController
+                            .GetAttackPowerMultiplier();
+
+                    damage =
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                damage *
+                                attackMultiplier
+                            )
+                        );
+
+                    Debug.Log(
+                        "[BattleManager] 적 공격력 상태이상: " +
+                        enemy.attackPower +
+                        " x " +
+                        attackMultiplier +
+                        " = " +
+                        damage
+                    );
+                }
+
+                // --------------------------------------
+                // 배고픔 25% 이하 패널티
+                // --------------------------------------
 
                 if (PlayerResourceManager.Instance != null &&
                     PlayerResourceManager.Instance
@@ -575,17 +888,131 @@ public class BattleManager : MonoBehaviour
                         Mathf.RoundToInt(
                             damage * 1.5f
                         );
+
+                    Debug.Log(
+                        "[BattleManager] " +
+                        "배고픔 패널티 적용 → 피해 1.5배"
+                    );
                 }
 
+                // --------------------------------------
+                // 플레이어 방어력 상태이상
+                // --------------------------------------
+
+                if (playerStatusController != null)
+                {
+                    float defenseMultiplier =
+                        playerStatusController
+                            .GetDefenseMultiplier();
+
+                    /*
+                     * DefenseUp
+                     * → 방어 배율 증가
+                     * → 받는 피해 감소
+                     *
+                     * DefenseDown
+                     * → 방어 배율 감소
+                     * → 받는 피해 증가
+                     */
+
+                    if (defenseMultiplier > 0f)
+                    {
+                        damage =
+                            Mathf.Max(
+                                1,
+                                Mathf.RoundToInt(
+                                    damage /
+                                    defenseMultiplier
+                                )
+                            );
+                    }
+
+                    Debug.Log(
+                        "[BattleManager] " +
+                        "플레이어 방어 상태이상 배율: " +
+                        defenseMultiplier
+                    );
+                }
+
+                // --------------------------------------
+                // 받는 피해량 상태이상
+                // --------------------------------------
+
+                if (playerStatusController != null)
+                {
+                    float damageTakenMultiplier =
+                        playerStatusController
+                            .GetDamageTakenMultiplier();
+
+                    damage =
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                damage *
+                                damageTakenMultiplier
+                            )
+                        );
+
+                    Debug.Log(
+                        "[BattleManager] " +
+                        "받는 피해 상태이상 배율: " +
+                        damageTakenMultiplier
+                    );
+                }
+
+                // --------------------------------------
+                // Guard
+                // --------------------------------------
+
+                if (guardWasActive)
+                {
+                    float guardMultiplier =
+                        Mathf.Clamp01(
+                            1f -
+                            guardDamageReductionPercent /
+                            100f
+                        );
+
+                    damage =
+                        Mathf.Max(
+                            1,
+                            Mathf.CeilToInt(
+                                damage *
+                                guardMultiplier
+                            )
+                        );
+
+                    applyGuardStunAfterTurn =
+                        true;
+
+                    Debug.Log(
+                        "[BattleManager] 방어 적용 - " +
+                        "받는 피해 감소 / " +
+                        "방어구 내구도 소모 " +
+                        guardArmorDurabilityMultiplier +
+                        "배"
+                    );
+                }
+
+                // --------------------------------------
+                // 최종 피해 적용
+                // --------------------------------------
+
                 if (playerUnit != null)
-                    playerUnit.TakeDamage(damage);
+                {
+                    playerUnit.TakeDamage(
+                        damage
+                    );
+                }
 
                 if (PlayerResourceManager.Instance != null)
                 {
                     PlayerResourceManager.Instance
                         .ChangeHealth(
                             -damage,
-                            "적 공격 피해"
+                            guardWasActive
+                                ? "적 공격 피해 (방어 적용)"
+                                : "적 공격 피해"
                         );
                 }
 
@@ -597,10 +1024,20 @@ public class BattleManager : MonoBehaviour
                     );
                 }
 
-                ConsumePlayerArmorDurability();
+                // --------------------------------------
+                // 방어구 내구도
+                // --------------------------------------
+
+                ConsumePlayerArmorDurability(
+                    guardWasActive
+                );
             }
             else
             {
+                // ======================================
+                // MISS
+                // ======================================
+
                 if (playerUnit != null)
                 {
                     ShowFloatingText(
@@ -614,6 +1051,33 @@ public class BattleManager : MonoBehaviour
                 afterHitDelay
             );
 
+            // ==========================================
+            // 적 턴 종료
+            // ==========================================
+
+            if (enemyStatusController != null)
+            {
+                enemyStatusController.ProcessTiming(
+                    StatusEffectTiming.SelfTurnEnd
+                );
+            }
+
+            // ==========================================
+            // Guard 반격 기절
+            // ==========================================
+
+            if (applyGuardStunAfterTurn &&
+                enemyStatusController != null)
+            {
+                enemyStatusController.AddStatusEffect(
+                    CreateGuardStunStatusData()
+                );
+            }
+
+            // ==========================================
+            // 플레이어 사망
+            // ==========================================
+
             if (playerUnit != null &&
                 playerUnit.IsDead)
             {
@@ -622,16 +1086,113 @@ public class BattleManager : MonoBehaviour
             }
         }
 
+        // ==========================================
+        // 적 팀 종료 상태이상
+        // ==========================================
+
         RemoveDeadEnemies();
+
+        if (playerStatusController != null)
+        {
+            playerStatusController.ProcessTiming(
+                StatusEffectTiming.EnemyTeamEnd
+            );
+        }
+
+        foreach (
+            BattleUnit enemy
+            in enemies)
+        {
+            StatusEffectController enemyStatusController =
+                GetStatusController(enemy);
+
+            if (enemyStatusController != null)
+            {
+                enemyStatusController.ProcessTiming(
+                    StatusEffectTiming.EnemyTeamEnd
+                );
+            }
+        }
+
+        // ==========================================
+        // 전체 턴 종료
+        // ==========================================
+
+        ProcessBattleTurnEndStatusEffects();
+
+        RemoveDeadEnemies();
+
+        if (playerUnit != null &&
+            playerUnit.IsDead)
+        {
+            EndBattle();
+            yield break;
+        }
+
+        // ==========================================
+        // 전투 승리
+        // ==========================================
+
+        if (AllEnemiesDead())
+        {
+            if (DungeonManager.Instance != null)
+            {
+                DungeonManager.Instance
+                    .AddTurn(
+                        "전투 승리"
+                    );
+            }
+
+            EndBattle();
+            yield break;
+        }
+
+        // ==========================================
+        // 던전 턴 증가
+        // ==========================================
 
         if (addTurnAtEnd &&
             DungeonManager.Instance != null)
         {
             DungeonManager.Instance
-                .AddTurn("전투 라운드 종료");
+                .AddTurn(
+                    "전투 라운드 종료"
+                );
         }
 
         ReturnToPlayerTurnIfPossible();
+    }
+
+
+    private void ProcessBattleTurnEndStatusEffects()
+    {
+        StatusEffectController playerStatusController =
+            GetPlayerStatusController();
+
+        if (playerStatusController != null)
+        {
+            playerStatusController.ProcessTiming(
+                StatusEffectTiming.TurnEnd
+            );
+        }
+
+        BattleUnit[] snapshot = enemies.ToArray();
+
+        foreach (BattleUnit enemy in snapshot)
+        {
+            if (enemy == null)
+                continue;
+
+            StatusEffectController controller =
+                GetStatusController(enemy);
+
+            if (controller != null)
+            {
+                controller.ProcessTiming(
+                    StatusEffectTiming.TurnEnd
+                );
+            }
+        }
     }
 
     private void ConsumePlayerWeaponDurability()
@@ -645,15 +1206,118 @@ public class BattleManager : MonoBehaviour
             );
     }
 
-    private void ConsumePlayerArmorDurability()
+    private void ConsumePlayerArmorDurability(
+        bool guardActive)
     {
         if (EquipmentManager.Instance == null)
             return;
 
+        int finalCost =
+            armorDurabilityCost;
+
+        if (guardActive)
+        {
+            finalCost *=
+                Mathf.Max(
+                    1,
+                    guardArmorDurabilityMultiplier
+                );
+        }
+
         EquipmentManager.Instance
             .ConsumeArmorDurability(
-                armorDurabilityCost
+                finalCost
             );
+    }
+
+    private StatusEffectController GetPlayerStatusController()
+    {
+        if (playerUnit == null)
+            return null;
+
+        StatusEffectController controller =
+            playerUnit.GetComponent<StatusEffectController>();
+
+        if (controller == null)
+        {
+            controller =
+                playerUnit.GetComponentInParent<StatusEffectController>();
+        }
+
+        if (controller == null)
+        {
+            controller =
+                playerUnit.GetComponentInChildren<StatusEffectController>();
+        }
+
+        return controller;
+    }
+
+    private StatusEffectController GetStatusController(
+        BattleUnit unit)
+    {
+        if (unit == null)
+            return null;
+
+        return unit.GetComponent<StatusEffectController>();
+    }
+
+    private StatusEffectController GetOrAddStatusController(
+        BattleUnit unit)
+    {
+        if (unit == null)
+            return null;
+
+        StatusEffectController controller =
+            unit.GetComponent<StatusEffectController>();
+
+        if (controller == null)
+        {
+            controller =
+                unit.gameObject.AddComponent<StatusEffectController>();
+        }
+
+        return controller;
+    }
+
+    private StatusEffectData CreateGuardStatusData()
+    {
+        return new StatusEffectData
+        {
+            id = GuardStatusId,
+            buffName = "방어",
+            description =
+                "이번 적 팀의 공격 피해를 50% 감소시키고, " +
+                "피격 시 방어구 내구도 소모가 2배가 됩니다. " +
+                "방어 중 공격한 적은 다음 행동 1회를 기절합니다.",
+            tendency = StatusEffectTendency.Positive,
+            effectType = StatusEffectType.Guard,
+            effectPower = guardDamageReductionPercent,
+            buffDuration = 1,
+            whenDecreaseDuration = StatusEffectTiming.EnemyTeamEnd,
+            whenBuffEffect = StatusEffectTiming.None,
+            canStack = false,
+            whenRemove = StatusEffectRemoveType.DurationEnded
+        };
+    }
+
+    private StatusEffectData CreateGuardStunStatusData()
+    {
+        return new StatusEffectData
+        {
+            id = GuardStunStatusId,
+            buffName = "기절",
+            description =
+                "다음 자신의 행동 1회를 수행할 수 없습니다.",
+            tendency = StatusEffectTendency.Negative,
+            effectType = StatusEffectType.Stun,
+            effectPower = 0,
+            buffDuration = 1,
+            whenDecreaseDuration = StatusEffectTiming.SelfTurnEnd,
+            whenBuffEffect = StatusEffectTiming.None,
+            canStack = true,
+            whenRemove = StatusEffectRemoveType.DurationEnded
+        };
     }
 
     private void ReturnToPlayerTurnIfPossible()
