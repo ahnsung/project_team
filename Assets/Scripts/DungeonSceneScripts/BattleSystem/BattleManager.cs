@@ -372,10 +372,32 @@ public class BattleManager : MonoBehaviour
 
     public void OnClickGuardButton()
     {
-        if (!battleRunning ||
-            state != BattleState.PlayerTurn)
+        if (!battleRunning)
+            return;
+
+        /*
+         * 일반 플레이어 턴뿐 아니라
+         * 공격 대상 선택 중에도 방어로 행동 변경 가능.
+         */
+        if (state != BattleState.PlayerTurn &&
+            state != BattleState.SelectingTarget)
         {
             return;
+        }
+
+        /*
+         * 공격 대상 선택 중이었다면
+         * 선택 상태를 취소한다.
+         */
+        if (state == BattleState.SelectingTarget)
+        {
+            ClearEnemyArrows();
+
+            state = BattleState.PlayerTurn;
+
+            Debug.Log(
+                "[BattleManager] 공격 대상 선택 취소 → 방어로 변경"
+            );
         }
 
         StatusEffectController playerStatusController =
