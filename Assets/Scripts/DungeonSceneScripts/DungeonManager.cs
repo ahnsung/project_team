@@ -1,80 +1,59 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class DungeonManager : MonoBehaviour
 {
-    public static DungeonManager Instance;
+    public static DungeonManager Instance { get; private set; }
 
     [Header("Map Size")]
-    [SerializeField]
-    private int mapWidth = 5;
-
-    [SerializeField]
-    private int mapHeight = 5;
+    [SerializeField] private int mapWidth = 44;
+    [SerializeField] private int mapHeight = 43;
 
     [Header("Start")]
     [SerializeField]
     private Vector2Int startRoom =
-        new Vector2Int(2, 2);
+        new Vector2Int(0, 26);
+
+    [Header("Dungeon State")]
+    [SerializeField] private int currentTurn = 0;
+    [SerializeField] private string currentEnvironment = "지하";
+    public event Action<int> OnTurnChanged;
 
     [Header("Refs")]
-    [SerializeField]
-    private DungeonUIManager uiManager;
-
-    [SerializeField]
-    private MinimapUIManager minimapUI;
-
-    [Header("Info Text")]
-    [SerializeField]
-    private TextMeshProUGUI currentTurnText;
-
-    [SerializeField]
-    private TextMeshProUGUI currentEnvironmentText;
-
-    [Header("Environment")]
-    [SerializeField]
-    private string currentEnvironment = "지하";
-
-    private const string DEFAULT_ENVIRONMENT =
-        "지하";
+    [SerializeField] private DungeonUIManager uiManager;
+    [SerializeField] private MinimapUIManager minimapUI;
+    [SerializeField] private DungeonMapDatabase mapDatabase;
 
     private Vector2Int currentRoom;
 
     private readonly HashSet<string> visited =
         new HashSet<string>();
 
-    private int currentTurn;
+    private const string XKEY = "ROOM_X";
+    private const string YKEY = "ROOM_Y";
+    private const string VISITED = "VISITED";
 
-    private const string XKEY =
-        "ROOM_X";
+    private const string TURN_KEY = "DUNGEON_TURN";
+    private const string ENVIRONMENT_KEY = "DUNGEON_ENVIRONMENT";
 
-    private const string YKEY =
-        "ROOM_Y";
-
-    private const string VISITED =
-        "VISITED";
-
-    private const string TURN_KEY =
-        "DUNGEON_TURN";
-
-    private const string ENV_KEY =
-        "DUNGEON_ENVIRONMENT";
+    // ============================
+    // 기존 스크립트 호환용 Property
+    // ============================
 
     public int MapWidth => mapWidth;
     public int MapHeight => mapHeight;
 
-    public Vector2Int CurrentRoom =>
-        currentRoom;
+    public Vector2Int CurrentRoom => currentRoom;
 
-    public int CurrentTurn =>
-        currentTurn;
+    public int CurrentTurn => currentTurn;
 
     public string CurrentEnvironment =>
         currentEnvironment;
 
-    public event Action<int> OnTurnChanged;
+    // ============================
+    // Unity
+    // ============================
 
     private void Awake()
     {
@@ -90,27 +69,37 @@ public class DungeonManager : MonoBehaviour
         Load();
 
         MarkVisited(currentRoom);
-        Save();
     }
 
     private void Start()
     {
+        if (mapDatabase == null)
+        {
+            mapDatabase =
+                DungeonMapDatabase.Instance;
+        }
+
+        ValidateCurrentRoom();
+
+        Save();
+
         RefreshAll();
 
+        LogCurrentTile();
+
         Debug.Log(
-            $"[던전] 현재 턴: {currentTurn}"
+            "[던전] 현재 턴: " +
+            currentTurn
         );
 
         Debug.Log(
             "[던전] 현재 장소: " +
-            ConvertEnvironmentToKorean(
-                currentEnvironment
-            )
+            currentEnvironment
         );
 
         OnTurnChanged?.Invoke(
-            currentTurn
-        );
+    currentTurn
+);
     }
 
     private void OnDestroy()
@@ -121,84 +110,88 @@ public class DungeonManager : MonoBehaviour
         }
     }
 
+    // ============================
+    // 이동
+    // ============================
+
     public void MoveToNextRoom(
         MoveDirection direction)
     {
-        Vector2Int next =
-            currentRoom;
-
-        switch (direction)
+        if (mapDatabase == null)
         {
-            case MoveDirection.Up:
-                next += Vector2Int.up;
-                break;
-
-            case MoveDirection.Down:
-                next += Vector2Int.down;
-                break;
-
-            case MoveDirection.Left:
-                next += Vector2Int.left;
-                break;
-
-            case MoveDirection.Right:
-                next += Vector2Int.right;
-                break;
+            mapDatabase =
+                DungeonMapDatabase.Instance;
         }
 
-        if (!IsInside(next))
-            return;
-
-        currentRoom =
-            next;
-
-        MarkVisited(
-            currentRoom
-        );
-
-        AddTurn(
-            "장소 이동"
-        );
-
-        RefreshAll();
-    }
-
-    public void AddTurn(
-        string reason)
-    {
-        currentTurn++;
-
-        Debug.Log(
-            $"[던전 턴] 현재 턴: {currentTurn} " +
-            $"/ 행동: {reason}"
-        );
-
-        Save();
-        RefreshKoreanInfoText();
-
-        OnTurnChanged?.Invoke(
-            currentTurn
-        );
-    }
-
-    public void SetEnvironment(
-        string environment)
-    {
-        currentEnvironment =
-            ConvertEnvironmentToKorean(
-                environment
+        if (mapDatabase == null)
+        {
+            Debug.LogError(
+                "[DungeonManager] DungeonMapDatabase를 찾을 수 없습니다."
             );
 
+            return;
+        }
+
+        Vector2Int next =
+            GetNextPosition(
+                currentRoom,
+                direction
+            );
+
+        if (!CanMoveTo(next))
+        {
+            Debug.LogWarning(
+                "[DungeonManager] 이동 불가: " +
+                currentRoom +
+                " -> " +
+                next
+            );
+
+            return;
+        }
+
+        currentRoom = next;
+
+        MarkVisited(currentRoom);
+
+        // 방 하나 이동 = 던전 턴 +1
+        AddTurn("방 이동");
+
         Save();
-        RefreshKoreanInfoText();
+
+        RefreshAll();
+
+        LogCurrentTile();
     }
 
-    public bool IsVisited(
-        int x,
-        int y)
+    public bool CanMove(
+        MoveDirection direction)
     {
-        return visited.Contains(
-            GetRoomKey(x, y)
+        Vector2Int next =
+            GetNextPosition(
+                currentRoom,
+                direction
+            );
+
+        return CanMoveTo(next);
+    }
+
+    public bool CanMoveTo(
+        Vector2Int position)
+    {
+        if (mapDatabase == null)
+        {
+            mapDatabase =
+                DungeonMapDatabase.Instance;
+        }
+
+        if (mapDatabase == null)
+        {
+            return false;
+        }
+
+        return mapDatabase.IsValidTile(
+            position
         );
     }
 
@@ -207,58 +200,279 @@ public class DungeonManager : MonoBehaviour
     {
         return new Dictionary<
             MoveDirection,
-            bool
-        >
+            bool>
         {
             {
                 MoveDirection.Up,
-                currentRoom.y < mapHeight - 1
+                CanMove(
+                    MoveDirection.Up
+                )
             },
+
             {
                 MoveDirection.Down,
-                currentRoom.y > 0
+                CanMove(
+                    MoveDirection.Down
+                )
             },
+
             {
                 MoveDirection.Left,
-                currentRoom.x > 0
+                CanMove(
+                    MoveDirection.Left
+                )
             },
+
             {
                 MoveDirection.Right,
-                currentRoom.x < mapWidth - 1
+                CanMove(
+                    MoveDirection.Right
+                )
             }
         };
     }
+
+    private Vector2Int GetNextPosition(
+        Vector2Int origin,
+        MoveDirection direction)
+    {
+        switch (direction)
+        {
+            case MoveDirection.Up:
+                return origin +
+                       Vector2Int.up;
+
+            case MoveDirection.Down:
+                return origin +
+                       Vector2Int.down;
+
+            case MoveDirection.Left:
+                return origin +
+                       Vector2Int.left;
+
+            case MoveDirection.Right:
+                return origin +
+                       Vector2Int.right;
+        }
+
+        return origin;
+    }
+
+    // ============================
+    // Tile
+    // ============================
+
+    public DungeonTileData GetCurrentTile()
+    {
+        if (mapDatabase == null)
+        {
+            mapDatabase =
+                DungeonMapDatabase.Instance;
+        }
+
+        if (mapDatabase == null)
+        {
+            return null;
+        }
+
+        return mapDatabase.GetTile(
+            currentRoom
+        );
+    }
+
+    public DungeonTileType
+        GetCurrentTileType()
+    {
+        DungeonTileData tile =
+            GetCurrentTile();
+
+        if (tile == null)
+        {
+            return DungeonTileType.None;
+        }
+
+        return tile.TileType;
+    }
+
+    private void ValidateCurrentRoom()
+    {
+        if (mapDatabase == null)
+        {
+            Debug.LogError(
+                "[DungeonManager] DungeonMapDatabase가 없습니다."
+            );
+
+            return;
+        }
+
+        if (mapDatabase.IsValidTile(
+                currentRoom))
+        {
+            return;
+        }
+
+        Debug.LogWarning(
+            "[DungeonManager] 저장된 현재 좌표 " +
+            currentRoom +
+            "가 새 맵에서 유효하지 않습니다."
+        );
+
+        if (mapDatabase.IsValidTile(
+                startRoom))
+        {
+            currentRoom = startRoom;
+
+            MarkVisited(currentRoom);
+
+            Debug.Log(
+                "[DungeonManager] 시작 좌표 " +
+                startRoom +
+                "로 이동합니다."
+            );
+
+            return;
+        }
+
+        Debug.LogError(
+            "[DungeonManager] Start Room " +
+            startRoom +
+            "도 유효하지 않은 타일입니다."
+        );
+    }
+
+    private void LogCurrentTile()
+    {
+        DungeonTileData tile =
+            GetCurrentTile();
+
+        if (tile == null)
+        {
+            Debug.LogWarning(
+                "[DungeonManager] 현재 좌표 " +
+                currentRoom +
+                "의 Tile_Data가 없습니다."
+            );
+
+            return;
+        }
+
+        Debug.Log(
+            "[DungeonManager] 현재 타일: (" +
+            tile.X +
+            ", " +
+            tile.Y +
+            ") / " +
+            tile.TileType
+        );
+    }
+
+    // ============================
+    // 방문 여부
+    // ============================
+
+    public bool IsVisited(
+        int x,
+        int y)
+    {
+        return visited.Contains(
+            GetVisitedKey(
+                x,
+                y
+            )
+        );
+    }
+
+    public bool IsVisited(
+        Vector2Int position)
+    {
+        return IsVisited(
+            position.x,
+            position.y
+        );
+    }
+
+    private void MarkVisited(
+        Vector2Int room)
+    {
+        visited.Add(
+            GetVisitedKey(
+                room.x,
+                room.y
+            )
+        );
+    }
+
+    private string GetVisitedKey(
+        int x,
+        int y)
+    {
+        return x + "," + y;
+    }
+
+    // ============================
+    // 턴
+    // ============================
+
+    public void AddTurn(string reason = "")
+    {
+        currentTurn++;
+
+        PlayerPrefs.SetInt(
+            TURN_KEY,
+            currentTurn
+        );
+
+        PlayerPrefs.Save();
+
+        if (string.IsNullOrEmpty(reason))
+        {
+            Debug.Log(
+                "[던전 턴] 현재 턴: " +
+                currentTurn
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "[던전 턴] 현재 턴: " +
+                currentTurn +
+                " / 행동: " +
+                reason
+            );
+        }
+
+        OnTurnChanged?.Invoke(
+            currentTurn
+        );
+    }
+
+    // ============================
+    // UI
+    // ============================
 
     public void RefreshAll()
     {
         if (uiManager != null)
         {
-            uiManager.RefreshDirectionButtons(
-                GetDirections()
-            );
+            uiManager
+                .RefreshDirectionButtons(
+                    GetDirections()
+                );
         }
 
         if (minimapUI != null)
         {
-            minimapUI.RefreshMinimap();
+            minimapUI
+                .RefreshMinimap();
         }
-
-        RefreshKoreanInfoText();
     }
-
-    public void ResetForNewGame(
-        bool saveData = true)
+    public void ResetForNewGame(bool saveData = true)
     {
-        currentRoom =
-            ClampRoomToMap(
-                startRoom
-            );
+        currentRoom = startRoom;
 
-        currentTurn =
-            0;
+        currentTurn = 0;
 
-        currentEnvironment =
-            DEFAULT_ENVIRONMENT;
+        currentEnvironment = "지하";
 
         visited.Clear();
 
@@ -279,160 +493,19 @@ public class DungeonManager : MonoBehaviour
 
         Debug.Log(
             "[DungeonManager] 새 게임 초기화 완료 " +
-            $"/ 시작 방: {currentRoom} " +
-            $"/ 턴: {currentTurn} " +
-            $"/ 환경: {currentEnvironment}"
+            "/ 시작 방: " +
+            currentRoom +
+            " / 턴: " +
+            currentTurn +
+            " / 환경: " +
+            currentEnvironment
         );
     }
 
-    private void FindInfoTextsIfNull()
-    {
-        if (currentTurnText == null)
-        {
-            GameObject turnObject =
-                GameObject.Find(
-                    "CurrentTurnText"
-                );
 
-            if (turnObject != null)
-            {
-                currentTurnText =
-                    turnObject.GetComponent<
-                        TextMeshProUGUI
-                    >();
-            }
-        }
-
-        if (currentEnvironmentText == null)
-        {
-            GameObject environmentObject =
-                GameObject.Find(
-                    "CurrentEnvironmentText"
-                );
-
-            if (environmentObject != null)
-            {
-                currentEnvironmentText =
-                    environmentObject.GetComponent<
-                        TextMeshProUGUI
-                    >();
-            }
-        }
-    }
-
-    private void RefreshKoreanInfoText()
-    {
-        FindInfoTextsIfNull();
-
-        if (currentTurnText != null)
-        {
-            currentTurnText.text =
-                "현재 턴 : " +
-                currentTurn;
-        }
-
-        if (currentEnvironmentText != null)
-        {
-            currentEnvironmentText.text =
-                "현재 장소 : " +
-                ConvertEnvironmentToKorean(
-                    currentEnvironment
-                );
-        }
-    }
-
-    private string ConvertEnvironmentToKorean(
-        string environment)
-    {
-        switch (environment)
-        {
-            case "Earth":
-            case "Underground":
-                return "지하";
-
-            case "Ground":
-            case "Surface":
-                return "지상";
-
-            case "Ruins":
-                return "폐허";
-
-            case "Forest":
-                return "숲";
-
-            case "Lab":
-                return "연구소";
-
-            case "City":
-                return "도시";
-
-            case "지하":
-            case "지상":
-            case "폐허":
-            case "숲":
-            case "연구소":
-            case "도시":
-                return environment;
-
-            default:
-                return string.IsNullOrEmpty(
-                    environment
-                )
-                    ? DEFAULT_ENVIRONMENT
-                    : environment;
-        }
-    }
-
-    private void MarkVisited(
-        Vector2Int room)
-    {
-        visited.Add(
-            GetRoomKey(
-                room.x,
-                room.y
-            )
-        );
-    }
-
-    private string GetRoomKey(
-        int x,
-        int y)
-    {
-        return x + "," + y;
-    }
-
-    private bool IsInside(
-        Vector2Int room)
-    {
-        return
-            room.x >= 0 &&
-            room.x < mapWidth &&
-            room.y >= 0 &&
-            room.y < mapHeight;
-    }
-
-    private Vector2Int ClampRoomToMap(
-        Vector2Int room)
-    {
-        int safeWidth =
-            Mathf.Max(1, mapWidth);
-
-        int safeHeight =
-            Mathf.Max(1, mapHeight);
-
-        return new Vector2Int(
-            Mathf.Clamp(
-                room.x,
-                0,
-                safeWidth - 1
-            ),
-            Mathf.Clamp(
-                room.y,
-                0,
-                safeHeight - 1
-            )
-        );
-    }
+    // ============================
+    // Save
+    // ============================
 
     private void Save()
     {
@@ -446,18 +519,6 @@ public class DungeonManager : MonoBehaviour
             currentRoom.y
         );
 
-        PlayerPrefs.SetInt(
-            TURN_KEY,
-            currentTurn
-        );
-
-        PlayerPrefs.SetString(
-            ENV_KEY,
-            ConvertEnvironmentToKorean(
-                currentEnvironment
-            )
-        );
-
         string merged =
             string.Join(
                 "|",
@@ -467,6 +528,16 @@ public class DungeonManager : MonoBehaviour
         PlayerPrefs.SetString(
             VISITED,
             merged
+        );
+
+        PlayerPrefs.SetInt(
+            TURN_KEY,
+            currentTurn
+        );
+
+        PlayerPrefs.SetString(
+            ENVIRONMENT_KEY,
+            currentEnvironment
         );
 
         PlayerPrefs.Save();
@@ -486,65 +557,106 @@ public class DungeonManager : MonoBehaviour
                         YKEY
                     )
                 );
-
-            currentRoom =
-                ClampRoomToMap(
-                    currentRoom
-                );
         }
         else
         {
             currentRoom =
-                ClampRoomToMap(
-                    startRoom
-                );
+                startRoom;
         }
 
         currentTurn =
-            Mathf.Max(
-                0,
-                PlayerPrefs.GetInt(
-                    TURN_KEY,
-                    0
-                )
+            PlayerPrefs.GetInt(
+                TURN_KEY,
+                0
             );
 
         currentEnvironment =
-            ConvertEnvironmentToKorean(
-                PlayerPrefs.GetString(
-                    ENV_KEY,
-                    DEFAULT_ENVIRONMENT
-                )
+            PlayerPrefs.GetString(
+                ENVIRONMENT_KEY,
+                "지하"
             );
 
         visited.Clear();
 
-        if (PlayerPrefs.HasKey(VISITED))
+        if (!PlayerPrefs.HasKey(
+                VISITED))
         {
-            string data =
-                PlayerPrefs.GetString(
-                    VISITED,
-                    ""
-                );
+            return;
+        }
 
-            if (!string.IsNullOrEmpty(data))
+        string data =
+            PlayerPrefs.GetString(
+                VISITED
+            );
+
+        if (string.IsNullOrWhiteSpace(
+                data))
+        {
+            return;
+        }
+
+        string[] arr =
+            data.Split('|');
+
+        foreach (string value in arr)
+        {
+            if (!string.IsNullOrWhiteSpace(
+                    value))
             {
-                string[] roomKeys =
-                    data.Split('|');
+                visited.Add(value);
+            }
+        }
+    }
 
-                foreach (
-                    string roomKey
-                    in roomKeys)
+    // SaveManager 연동
+    // ============================
+
+    public List<string> GetVisitedRoomsForSave()
+    {
+        return new List<string>(visited);
+    }
+
+    public void RestoreDungeonState(
+        Vector2Int room,
+        int turn,
+        string environment,
+        List<string> visitedRooms)
+    {
+        currentRoom = room;
+        currentTurn = Mathf.Max(0, turn);
+
+        currentEnvironment =
+            string.IsNullOrEmpty(environment)
+                ? "지하"
+                : environment;
+
+        visited.Clear();
+
+        if (visitedRooms != null)
+        {
+            foreach (string roomKey in visitedRooms)
+            {
+                if (!string.IsNullOrWhiteSpace(roomKey))
                 {
-                    if (!string.IsNullOrEmpty(
-                        roomKey))
-                    {
-                        visited.Add(
-                            roomKey
-                        );
-                    }
+                    visited.Add(roomKey);
                 }
             }
         }
+
+        MarkVisited(currentRoom);
+
+        Save();
+
+        RefreshAll();
+
+        OnTurnChanged?.Invoke(currentTurn);
+
+        Debug.Log(
+            "[DungeonManager] SaveManager 던전 상태 복구 완료\n" +
+            $"현재 위치: {currentRoom}\n" +
+            $"현재 턴: {currentTurn}\n" +
+            $"환경: {currentEnvironment}\n" +
+            $"방문 타일: {visited.Count}"
+        );
     }
 }

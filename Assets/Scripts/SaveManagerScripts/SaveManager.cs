@@ -64,8 +64,20 @@ public class SaveManager : MonoBehaviour
     [Serializable]
     public class GameplaySaveData
     {
+        // 인벤토리 / 장비
         public List<InventoryItemSaveData> items =
             new List<InventoryItemSaveData>();
+
+        // 던전 상태
+        public int dungeonX;
+        public int dungeonY;
+
+        public int dungeonTurn;
+
+        public string dungeonEnvironment = "지하";
+
+        public List<string> visitedRooms =
+            new List<string>();
     }
 
     private void Awake()
@@ -318,6 +330,27 @@ public class SaveManager : MonoBehaviour
 
         HashSet<string> savedUniqueIds =
             new HashSet<string>();
+
+        DungeonManager dungeon =
+    DungeonManager.Instance;
+
+        if (dungeon != null)
+        {
+            saveData.dungeonX =
+                dungeon.CurrentRoom.x;
+
+            saveData.dungeonY =
+                dungeon.CurrentRoom.y;
+
+            saveData.dungeonTurn =
+                dungeon.CurrentTurn;
+
+            saveData.dungeonEnvironment =
+                dungeon.CurrentEnvironment;
+
+            saveData.visitedRooms =
+                dungeon.GetVisitedRoomsForSave();
+        }
 
         if (inventory.items != null)
         {
@@ -590,6 +623,50 @@ public class SaveManager : MonoBehaviour
         {
             saveData.items =
                 new List<InventoryItemSaveData>();
+        }
+
+        if (saveData.visitedRooms == null)
+        {
+            saveData.visitedRooms =
+                new List<string>();
+        }
+
+        DungeonManager dungeon =
+            DungeonManager.Instance;
+
+        if (dungeon != null)
+        {
+            Vector2Int savedRoom =
+                new Vector2Int(
+                    saveData.dungeonX,
+                    saveData.dungeonY
+                );
+
+            /*
+             * 기존 GameplaySaveData에는 던전 필드가 없었으므로
+             * 구버전 저장과의 호환을 위해 유효한 좌표일 때만 복구한다.
+             */
+            DungeonMapDatabase mapDatabase =
+                DungeonMapDatabase.Instance;
+
+            if (mapDatabase != null &&
+                mapDatabase.IsValidTile(savedRoom))
+            {
+                dungeon.RestoreDungeonState(
+                    savedRoom,
+                    saveData.dungeonTurn,
+                    saveData.dungeonEnvironment,
+                    saveData.visitedRooms
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "[SaveManager] GameplaySaveData의 던전 좌표가 " +
+                    "현재 Tile_Data에서 유효하지 않아 기존 DungeonManager 상태를 유지합니다.\n" +
+                    $"저장 좌표: {savedRoom}"
+                );
+            }
         }
 
         isLoading = true;
