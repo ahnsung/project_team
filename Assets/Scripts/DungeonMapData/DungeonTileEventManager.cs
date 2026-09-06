@@ -327,15 +327,101 @@ public class DungeonTileEventManager : MonoBehaviour
     private IEnumerator HandleTrapEnter(
         DungeonTileData tile)
     {
+        TrapDataLoader trapLoader =
+            TrapDataLoader.Instance;
+
+        if (trapLoader == null)
+        {
+            Debug.LogError(
+                "[TileEvent] TrapDataLoader를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
+        TrapTileData trapData =
+            trapLoader.GetData(
+                tile.X,
+                tile.Y
+            );
+
+        if (trapData == null)
+        {
+            Debug.LogWarning(
+                "[TileEvent] Trap 타일인데 Trap_Data가 없습니다.\n" +
+                $"좌표: ({tile.X}, {tile.Y})"
+            );
+
+            yield break;
+        }
+
         /*
-         * TrapType의 실제 효과가 아직 확정되지 않았으므로
-         * 지금은 자동 이벤트 진입점만 구축한다.
+         * 0 이상 100 미만의 실수를 뽑는다.
+         *
+         * 예:
+         * TrapPossibility = 70
+         * → 70% 확률로 함정 발동.
          */
+        float roll =
+            Random.Range(0f, 100f);
+
+        bool triggered =
+            roll < trapData.trapPossibility;
 
         Debug.Log(
-            $"[TileEvent] Trap 자동 이벤트: " +
-            $"({tile.X}, {tile.Y})"
+            "[Trap] 함정 판정\n" +
+            $"좌표: ({trapData.x}, {trapData.y})\n" +
+            $"TrapType: {trapData.trapType}\n" +
+            $"발동 확률: {trapData.trapPossibility}%\n" +
+            $"주사위 값: {roll:F2}"
         );
+
+        // =====================================================
+        // 함정 회피
+        // =====================================================
+
+        if (!triggered)
+        {
+            Debug.Log(
+                "[Trap] 함정을 회피했습니다."
+            );
+
+            /*
+             * 나중에 알림 UI를 붙이면
+             * 여기서:
+             *
+             * "함정을 회피했습니다."
+             *
+             * 메시지를 출력하면 된다.
+             */
+
+            yield break;
+        }
+
+        // =====================================================
+        // 함정 발동
+        // =====================================================
+
+        Debug.Log(
+            "[Trap] 함정 발동!\n" +
+            $"TrapType: {trapData.trapType}\n" +
+            $"지속 턴: {trapData.trapAmount}"
+        );
+
+        /*
+         * TrapType 1~6의 실제 상태이상 효과는
+         * 아직 기획 데이터가 확정되지 않았으므로
+         * 여기서는 적용하지 않는다.
+         *
+         * 추후:
+         *
+         * ApplyTrapStatusEffect(
+         *     trapData.trapType,
+         *     trapData.trapAmount
+         * );
+         *
+         * 같은 식으로 연결하면 된다.
+         */
 
         yield break;
     }
@@ -382,10 +468,62 @@ public class DungeonTileEventManager : MonoBehaviour
     private IEnumerator HandleChest(
         DungeonTileData tile)
     {
+        ChestDataLoader chestLoader =
+            ChestDataLoader.Instance;
+
+        if (chestLoader == null)
+        {
+            Debug.LogError(
+                "[TileEvent] ChestDataLoader를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
+        ChestTileData chestData =
+            chestLoader.GetData(
+                tile.X,
+                tile.Y
+            );
+
+        if (chestData == null)
+        {
+            Debug.LogWarning(
+                "[TileEvent] Chest 타일인데 Chest_Data가 없습니다.\n" +
+                $"좌표: ({tile.X}, {tile.Y})"
+            );
+
+            yield break;
+        }
+
         Debug.Log(
-            $"[TileEvent] Chest 상호작용 예정: " +
-            $"({tile.X}, {tile.Y})"
+            $"[Chest] 상자 데이터 확인 완료\n" +
+            $"좌표: ({chestData.x}, {chestData.y})\n" +
+            $"보상 종류: {chestData.items.Count}개"
         );
+
+        for (int i = 0; i < chestData.items.Count; i++)
+        {
+            ChestItemData item =
+                chestData.items[i];
+
+            Debug.Log(
+                $"[Chest] 보상 {i + 1}\n" +
+                $"ItemID: {item.itemID}\n" +
+                $"수량: {item.amount}"
+            );
+        }
+
+        /*
+         * 다음 단계에서:
+         *
+         * 1. 상자 보상 UI 표시
+         * 2. 각 아이템 V / X 선택
+         * 3. 실제 Inventory에 추가
+         * 4. 하나라도 획득했다면 상자 사용 완료 처리
+         *
+         * 를 붙인다.
+         */
 
         yield break;
     }
@@ -397,12 +535,30 @@ public class DungeonTileEventManager : MonoBehaviour
     private IEnumerator HandlePuzzleLetter(
         DungeonTileData tile)
     {
+        PuzzleLetterUI puzzleUI =
+            PuzzleLetterUI.Instance;
+
+        if (puzzleUI == null)
+        {
+            Debug.LogError(
+                "[TileEvent] PuzzleLetterUI를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
+        string message =
+            $"단서를 발견했습니다.\n\n" +
+            $"좌표: ({tile.X}, {tile.Y})";
+
         Debug.Log(
-            $"[TileEvent] Puzzle/Letter 상호작용 예정: " +
+            $"[TileEvent] Puzzle/Letter 상호작용: " +
             $"({tile.X}, {tile.Y})"
         );
 
-        yield break;
+        yield return StartCoroutine(
+            puzzleUI.ShowMessage(message)
+        );
     }
 
     // =========================================================
@@ -425,14 +581,74 @@ public class DungeonTileEventManager : MonoBehaviour
     // =========================================================
 
     private IEnumerator HandleRest(
-        DungeonTileData tile)
+    DungeonTileData tile)
     {
-        Debug.Log(
-            $"[TileEvent] Rest 상호작용 예정: " +
-            $"({tile.X}, {tile.Y})"
+        RestTileManager restManager =
+            RestTileManager.Instance;
+
+        if (restManager == null)
+        {
+            Debug.LogError(
+                "[TileEvent] RestTileManager를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
+        Vector2Int position =
+            new Vector2Int(
+                tile.X,
+                tile.Y
+            );
+
+        // 이미 사용한 휴식 장소
+        if (!restManager.CanRest(position))
+        {
+            Debug.Log(
+                "[TileEvent] 이 장소에서는 이미 휴식했습니다.\n" +
+                "던전을 나갔다 다시 들어와야 다시 휴식할 수 있습니다."
+            );
+
+            yield break;
+        }
+
+        RestConfirmUI confirmUI =
+            RestConfirmUI.Instance;
+
+        if (confirmUI == null)
+        {
+            Debug.LogError(
+                "[TileEvent] RestConfirmUI를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
+        // 확인창 표시 후 선택을 기다림
+        yield return StartCoroutine(
+            confirmUI.ShowConfirm()
         );
 
-        yield break;
+        // 아니요
+        if (!confirmUI.GetResult())
+        {
+            Debug.Log(
+                "[TileEvent] 휴식을 취소했습니다."
+            );
+
+            yield break;
+        }
+
+        // 네
+        bool success =
+            restManager.Rest(position);
+
+        if (success)
+        {
+            Debug.Log(
+                $"[TileEvent] Rest 완료: ({tile.X}, {tile.Y})"
+            );
+        }
     }
 
     // =========================================================

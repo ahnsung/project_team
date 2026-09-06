@@ -20,5 +20,6 @@ public class ChestTileData
     public int x;
     public int y;
 
-    public List<ChestItemData> items = new List<ChestItemData>();
+    public List<ChestItemData> items =
+        new List<ChestItemData>();
 }
