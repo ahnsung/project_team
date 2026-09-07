@@ -1,9 +1,14 @@
 using System.Collections;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class DungeonTileEventManager : MonoBehaviour
 {
     public static DungeonTileEventManager Instance { get; private set; }
+
+    private readonly HashSet<Vector2Int>
+    usedChestTiles =
+        new HashSet<Vector2Int>();
 
     [Header("References")]
     [SerializeField] private DungeonManager dungeonManager;
@@ -466,8 +471,23 @@ public class DungeonTileEventManager : MonoBehaviour
     // =========================================================
 
     private IEnumerator HandleChest(
-        DungeonTileData tile)
+    DungeonTileData tile)
     {
+        Vector2Int position =
+            new Vector2Int(
+                tile.X,
+                tile.Y
+            );
+
+        if (usedChestTiles.Contains(position))
+        {
+            Debug.Log(
+                $"[Chest] 이미 사용한 상자입니다: {position}"
+            );
+
+            yield break;
+        }
+
         ChestDataLoader chestLoader =
             ChestDataLoader.Instance;
 
@@ -496,36 +516,44 @@ public class DungeonTileEventManager : MonoBehaviour
             yield break;
         }
 
+        if (DungeonRewardUI.Instance == null)
+        {
+            Debug.LogError(
+                "[Chest] DungeonRewardUI를 찾을 수 없습니다."
+            );
+
+            yield break;
+        }
+
         Debug.Log(
-            $"[Chest] 상자 데이터 확인 완료\n" +
-            $"좌표: ({chestData.x}, {chestData.y})\n" +
+            $"[Chest] 상자 열기\n" +
+            $"좌표: ({tile.X}, {tile.Y})\n" +
             $"보상 종류: {chestData.items.Count}개"
         );
 
-        for (int i = 0; i < chestData.items.Count; i++)
+        yield return
+            DungeonRewardUI.Instance
+                .ShowChestRewards(
+                    chestData.items
+                );
+
+        if (DungeonRewardUI.Instance
+            .AnyItemAcquired)
         {
-            ChestItemData item =
-                chestData.items[i];
+            usedChestTiles.Add(
+                position
+            );
 
             Debug.Log(
-                $"[Chest] 보상 {i + 1}\n" +
-                $"ItemID: {item.itemID}\n" +
-                $"수량: {item.amount}"
+                $"[Chest] 상자 사용 완료: {position}"
             );
         }
-
-        /*
-         * 다음 단계에서:
-         *
-         * 1. 상자 보상 UI 표시
-         * 2. 각 아이템 V / X 선택
-         * 3. 실제 Inventory에 추가
-         * 4. 하나라도 획득했다면 상자 사용 완료 처리
-         *
-         * 를 붙인다.
-         */
-
-        yield break;
+        else
+        {
+            Debug.Log(
+                $"[Chest] 획득한 아이템 없음: {position}"
+            );
+        }
     }
 
     // =========================================================
@@ -664,5 +692,77 @@ public class DungeonTileEventManager : MonoBehaviour
         );
 
         yield break;
+    }
+
+    public List<string> GetUsedChestTilesForSave()
+    {
+        List<string> result =
+            new List<string>();
+
+        foreach (
+            Vector2Int position
+            in usedChestTiles)
+        {
+            result.Add(
+                $"{position.x},{position.y}"
+            );
+        }
+
+        return result;
+    }
+
+    public void RestoreUsedChestTiles(
+        List<string> savedTiles)
+    {
+        usedChestTiles.Clear();
+
+        if (savedTiles == null)
+            return;
+
+        foreach (
+            string entry
+            in savedTiles)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+                continue;
+
+            string[] parts =
+                entry.Split(',');
+
+            if (parts.Length != 2)
+                continue;
+
+            if (!int.TryParse(
+                    parts[0],
+                    out int x))
+            {
+                continue;
+            }
+
+            if (!int.TryParse(
+                    parts[1],
+                    out int y))
+            {
+                continue;
+            }
+
+            usedChestTiles.Add(
+                new Vector2Int(
+                    x,
+                    y
+                )
+            );
+        }
+
+        Debug.Log(
+            "[Chest] 사용 완료 상자 복구: " +
+            usedChestTiles.Count +
+            "개"
+        );
+    }
+
+    public void ClearUsedChestTiles()
+    {
+        usedChestTiles.Clear();
     }
 }
