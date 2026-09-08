@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ced264959005cb946af26152385f13eb
+guid: 711000ce6a822db4196a1c75065bad96
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2056022292981510934
-    second: Button_Bag_0
+      213: -7704324173496730614
+    second: Maptile_Trap_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Button_Bag_0
+      name: Maptile_Trap_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 206
-        height: 209
+        width: 80
+        height: 80
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 6137277d165788c10800000000000000
-      internalID: 2056022292981510934
+      spriteID: a0cb544cbfdb41590800000000000000
+      internalID: -7704324173496730614
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Button_Bag_0: 2056022292981510934
+      Maptile_Trap_0: -7704324173496730614
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

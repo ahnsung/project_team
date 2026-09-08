@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 3b8f34101eb5ebe4bb9e4cce44973102
+guid: 090b1c0c78bfa23489feadb7c3fbff0e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7766057500886956902
-    second: Button_Defense_Click_0
+      213: -2593176476562498464
+    second: Maptile_Wall_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Button_Defense_Click_0
+      name: Maptile_Wall_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 106
-        height: 106
+        width: 80
+        height: 12
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 66bff95962496cb60800000000000000
-      internalID: 7766057500886956902
+      spriteID: 06cd79adbbf230cd0800000000000000
+      internalID: -2593176476562498464
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Button_Defense_Click_0: 7766057500886956902
+      Maptile_Wall_0: -2593176476562498464
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
