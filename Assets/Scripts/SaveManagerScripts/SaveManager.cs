@@ -8,18 +8,24 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance;
 
-    private const string GameplaySaveKey = "GameplaySaveData";
+    private const string GameplaySaveKey =
+        "GameplaySaveData";
+
 
     [Header("Debug")]
-    [SerializeField] private bool printSaveLog = true;
+    [SerializeField]
+    private bool printSaveLog = true;
+
 
     private bool isLoading;
-    public bool IsLoading => isLoading;
+
+    public bool IsLoading =>
+        isLoading;
 
 
-    // =====================================
+    // =========================================================
     // Save Data
-    // =====================================
+    // =========================================================
 
     [Serializable]
     public class InventoryItemSaveData
@@ -48,14 +54,21 @@ public class SaveManager : MonoBehaviour
         public List<InventoryItemSaveData> items =
             new List<InventoryItemSaveData>();
 
+
+        // 사용 완료 Chest
         public List<string> usedChestTiles =
+            new List<string>();
+
+
+        // 획득 완료 Key
+        public List<string> usedKeyTiles =
             new List<string>();
     }
 
 
-    // =====================================
+    // =========================================================
     // Unity
-    // =====================================
+    // =========================================================
 
     private void Awake()
     {
@@ -72,6 +85,7 @@ public class SaveManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
 
         SceneManager.sceneLoaded +=
             OnSceneLoaded;
@@ -115,6 +129,7 @@ public class SaveManager : MonoBehaviour
         if (!HasGameplaySave())
             return;
 
+
         StartCoroutine(
             LoadGameplayDataAfterSceneReady()
         );
@@ -127,8 +142,13 @@ public class SaveManager : MonoBehaviour
         yield return null;
         yield return null;
 
-        float timeout = 3f;
-        float elapsed = 0f;
+
+        float timeout =
+            3f;
+
+        float elapsed =
+            0f;
+
 
         while (elapsed < timeout)
         {
@@ -141,6 +161,7 @@ public class SaveManager : MonoBehaviour
             bool itemDatabaseReady =
                 ItemDatabase.Instance != null;
 
+
             if (inventoryReady &&
                 equipmentReady &&
                 itemDatabaseReady)
@@ -150,6 +171,7 @@ public class SaveManager : MonoBehaviour
                 yield break;
             }
 
+
             elapsed +=
                 Time.unscaledDeltaTime;
 
@@ -158,9 +180,9 @@ public class SaveManager : MonoBehaviour
     }
 
 
-    // =====================================
+    // =========================================================
     // New Save
-    // =====================================
+    // =========================================================
 
     public void CreateNewSave(
         int characterID,
@@ -186,9 +208,11 @@ public class SaveManager : MonoBehaviour
             playerName
         );
 
+
         PlayerPrefs.DeleteKey(
             GameplaySaveKey
         );
+
 
         PlayerPrefs.Save();
 
@@ -197,13 +221,16 @@ public class SaveManager : MonoBehaviour
         {
             DungeonTileEventManager.Instance
                 .ClearUsedChestTiles();
+
+            DungeonTileEventManager.Instance
+                .ClearUsedKeyTiles();
         }
     }
 
 
-    // =====================================
+    // =========================================================
     // Basic Save Info
-    // =====================================
+    // =========================================================
 
     public bool HasSave()
     {
@@ -249,20 +276,22 @@ public class SaveManager : MonoBehaviour
     }
 
 
-    // =====================================
+    // =========================================================
     // Save Gameplay
-    // =====================================
+    // =========================================================
 
     public void SaveGameplayData()
     {
         if (isLoading)
             return;
 
+
         InventoryManager inventory =
             InventoryManager.Instance;
 
         EquipmentManager equipment =
             EquipmentManager.Instance;
+
 
         if (inventory == null ||
             equipment == null)
@@ -274,13 +303,14 @@ public class SaveManager : MonoBehaviour
         GameplaySaveData saveData =
             new GameplaySaveData();
 
+
         HashSet<string> savedUniqueIds =
             new HashSet<string>();
 
 
-        // =====================================
+        // =====================================================
         // Inventory
-        // =====================================
+        // =====================================================
 
         foreach (
             InventoryItem item
@@ -296,9 +326,9 @@ public class SaveManager : MonoBehaviour
         }
 
 
-        // =====================================
+        // =====================================================
         // Equipment
-        // =====================================
+        // =====================================================
 
         AddItemToSaveData(
             saveData,
@@ -308,6 +338,7 @@ public class SaveManager : MonoBehaviour
             EquipmentSlotType.Head
         );
 
+
         AddItemToSaveData(
             saveData,
             savedUniqueIds,
@@ -315,6 +346,7 @@ public class SaveManager : MonoBehaviour
             true,
             EquipmentSlotType.Armor
         );
+
 
         AddItemToSaveData(
             saveData,
@@ -324,6 +356,7 @@ public class SaveManager : MonoBehaviour
             EquipmentSlotType.Shoes
         );
 
+
         AddItemToSaveData(
             saveData,
             savedUniqueIds,
@@ -331,6 +364,7 @@ public class SaveManager : MonoBehaviour
             true,
             EquipmentSlotType.MainWeapon
         );
+
 
         AddItemToSaveData(
             saveData,
@@ -341,34 +375,45 @@ public class SaveManager : MonoBehaviour
         );
 
 
-        // =====================================
-        // Chest
-        // =====================================
+        // =====================================================
+        // Dungeon Tile States
+        // =====================================================
 
-        DungeonTileEventManager tileEventManager =
-            DungeonTileEventManager.Instance;
+        DungeonTileEventManager
+            tileEventManager =
+                DungeonTileEventManager.Instance;
+
 
         if (tileEventManager != null)
         {
+            // Chest
             saveData.usedChestTiles =
                 tileEventManager
                     .GetUsedChestTilesForSave();
+
+
+            // Key
+            saveData.usedKeyTiles =
+                tileEventManager
+                    .GetUsedKeyTilesForSave();
         }
 
 
-        // =====================================
+        // =====================================================
         // JSON
-        // =====================================
+        // =====================================================
 
         string json =
             JsonUtility.ToJson(
                 saveData
             );
 
+
         PlayerPrefs.SetString(
             GameplaySaveKey,
             json
         );
+
 
         PlayerPrefs.Save();
 
@@ -377,12 +422,20 @@ public class SaveManager : MonoBehaviour
         {
             Debug.Log(
                 "[SaveManager] 저장 완료\n" +
-                $"아이템: {saveData.items.Count}개\n" +
-                $"사용한 상자: {saveData.usedChestTiles.Count}개"
+                $"아이템: " +
+                $"{saveData.items.Count}개\n" +
+                $"사용한 상자: " +
+                $"{saveData.usedChestTiles.Count}개\n" +
+                $"획득한 열쇠 타일: " +
+                $"{saveData.usedKeyTiles.Count}개"
             );
         }
     }
 
+
+    // =========================================================
+    // Add Item Save Data
+    // =========================================================
 
     private void AddItemToSaveData(
         GameplaySaveData saveData,
@@ -394,19 +447,23 @@ public class SaveManager : MonoBehaviour
         if (item == null)
             return;
 
+
         if (item.data == null)
         {
             Debug.LogWarning(
-                "[SaveManager] data가 없는 아이템은 저장하지 않습니다."
+                "[SaveManager] data가 없는 " +
+                "아이템은 저장하지 않습니다."
             );
 
             return;
         }
 
+
         if (item.data.id <= 0)
         {
             Debug.LogWarning(
-                "[SaveManager] 잘못된 ItemID를 가진 아이템은 저장하지 않습니다.\n" +
+                "[SaveManager] 잘못된 ItemID를 가진 " +
+                "아이템은 저장하지 않습니다.\n" +
                 $"ItemID: {item.data.id}"
             );
 
@@ -473,9 +530,9 @@ public class SaveManager : MonoBehaviour
     }
 
 
-    // =====================================
+    // =========================================================
     // Load Gameplay
-    // =====================================
+    // =========================================================
 
     public void LoadGameplayData()
     {
@@ -501,7 +558,8 @@ public class SaveManager : MonoBehaviour
             itemDatabase == null)
         {
             Debug.LogWarning(
-                "[SaveManager] 아직 저장 데이터를 불러올 준비가 되지 않았습니다."
+                "[SaveManager] 아직 저장 데이터를 " +
+                "불러올 준비가 되지 않았습니다."
             );
 
             return;
@@ -514,8 +572,12 @@ public class SaveManager : MonoBehaviour
                 ""
             );
 
-        if (string.IsNullOrEmpty(json))
+
+        if (string.IsNullOrEmpty(
+            json))
+        {
             return;
+        }
 
 
         GameplaySaveData saveData;
@@ -524,9 +586,10 @@ public class SaveManager : MonoBehaviour
         try
         {
             saveData =
-                JsonUtility.FromJson<GameplaySaveData>(
-                    json
-                );
+                JsonUtility
+                    .FromJson<GameplaySaveData>(
+                        json
+                    );
         }
         catch (Exception exception)
         {
@@ -543,6 +606,10 @@ public class SaveManager : MonoBehaviour
             return;
 
 
+        // =====================================================
+        // 구버전 세이브 호환
+        // =====================================================
+
         if (saveData.items == null)
         {
             saveData.items =
@@ -557,16 +624,29 @@ public class SaveManager : MonoBehaviour
         }
 
 
-        isLoading = true;
+        /*
+         * 기존 세이브에는 usedKeyTiles가 없으므로
+         * null일 경우 빈 리스트 생성.
+         */
+        if (saveData.usedKeyTiles == null)
+        {
+            saveData.usedKeyTiles =
+                new List<string>();
+        }
+
+
+        isLoading =
+            true;
 
 
         try
         {
-            // =====================================
+            // =================================================
             // Clear
-            // =====================================
+            // =================================================
 
             inventory.ClearForLoad();
+
 
             equipment
                 .ClearEquipmentForLoad();
@@ -574,15 +654,19 @@ public class SaveManager : MonoBehaviour
 
             Dictionary<string, InventoryItem>
                 restoredItems =
-                    new Dictionary<string, InventoryItem>();
+                    new Dictionary<
+                        string,
+                        InventoryItem
+                    >();
 
 
-            int skippedInvalidItems = 0;
+            int skippedInvalidItems =
+                0;
 
 
-            // =====================================
-            // Create InventoryItem objects
-            // =====================================
+            // =================================================
+            // Create InventoryItem Objects
+            // =================================================
 
             foreach (
                 InventoryItemSaveData savedItem
@@ -592,18 +676,17 @@ public class SaveManager : MonoBehaviour
                     continue;
 
 
-                // =================================
-                // ItemID 0 방어
-                // =================================
-
                 if (savedItem.itemId <= 0)
                 {
                     skippedInvalidItems++;
 
+
                     Debug.LogWarning(
-                        "[SaveManager] 잘못된 저장 아이템을 건너뜁니다.\n" +
+                        "[SaveManager] 잘못된 저장 " +
+                        "아이템을 건너뜁니다.\n" +
                         $"ItemID: {savedItem.itemId}"
                     );
+
 
                     continue;
                 }
@@ -619,11 +702,14 @@ public class SaveManager : MonoBehaviour
                 {
                     skippedInvalidItems++;
 
+
                     Debug.LogWarning(
-                        "[SaveManager] ItemDatabase에 존재하지 않는 " +
-                        "저장 아이템을 건너뜁니다.\n" +
+                        "[SaveManager] ItemDatabase에 " +
+                        "존재하지 않는 저장 아이템을 " +
+                        "건너뜁니다.\n" +
                         $"ItemID: {savedItem.itemId}"
                     );
+
 
                     continue;
                 }
@@ -646,6 +732,7 @@ public class SaveManager : MonoBehaviour
 
                 savedItem.uniqueId =
                     restoredUniqueId;
+
 
                 restoredItem.uniqueId =
                     restoredUniqueId;
@@ -692,9 +779,9 @@ public class SaveManager : MonoBehaviour
             }
 
 
-            // =====================================
+            // =================================================
             // Inventory Restore
-            // =====================================
+            // =================================================
 
             foreach (
                 InventoryItemSaveData savedItem
@@ -703,8 +790,10 @@ public class SaveManager : MonoBehaviour
                 if (savedItem == null)
                     continue;
 
+
                 if (savedItem.itemId <= 0)
                     continue;
+
 
                 if (savedItem.isEquipped)
                     continue;
@@ -734,9 +823,9 @@ public class SaveManager : MonoBehaviour
             }
 
 
-            // =====================================
+            // =================================================
             // Equipment Restore
-            // =====================================
+            // =================================================
 
             foreach (
                 InventoryItemSaveData savedItem
@@ -745,8 +834,10 @@ public class SaveManager : MonoBehaviour
                 if (savedItem == null)
                     continue;
 
+
                 if (savedItem.itemId <= 0)
                     continue;
+
 
                 if (!savedItem.isEquipped)
                     continue;
@@ -780,13 +871,14 @@ public class SaveManager : MonoBehaviour
 
             inventory.FinishLoad();
 
+
             equipment
                 .FinishEquipmentLoad();
 
 
-            // =====================================
-            // Chest Restore
-            // =====================================
+            // =================================================
+            // Dungeon Tile State Restore
+            // =================================================
 
             DungeonTileEventManager
                 tileEventManager =
@@ -795,51 +887,67 @@ public class SaveManager : MonoBehaviour
 
             if (tileEventManager != null)
             {
+                // Chest
                 tileEventManager
                     .RestoreUsedChestTiles(
                         saveData.usedChestTiles
                     );
+
+
+                // Key
+                tileEventManager
+                    .RestoreUsedKeyTiles(
+                        saveData.usedKeyTiles
+                    );
             }
 
 
-            // =====================================
+            // =================================================
             // Log
-            // =====================================
+            // =================================================
 
             if (printSaveLog)
             {
                 Debug.Log(
                     "[SaveManager] 불러오기 완료\n" +
-                    $"저장 데이터 아이템: {saveData.items.Count}개\n" +
-                    $"정상 복구 아이템: {restoredItems.Count}개\n" +
-                    $"잘못된 아이템 건너뜀: {skippedInvalidItems}개\n" +
-                    $"사용한 상자: {saveData.usedChestTiles.Count}개"
+                    $"저장 데이터 아이템: " +
+                    $"{saveData.items.Count}개\n" +
+                    $"정상 복구 아이템: " +
+                    $"{restoredItems.Count}개\n" +
+                    $"잘못된 아이템 건너뜀: " +
+                    $"{skippedInvalidItems}개\n" +
+                    $"사용한 상자: " +
+                    $"{saveData.usedChestTiles.Count}개\n" +
+                    $"획득한 열쇠 타일: " +
+                    $"{saveData.usedKeyTiles.Count}개"
                 );
             }
         }
         finally
         {
-            isLoading = false;
+            isLoading =
+                false;
         }
 
 
-        // =====================================
+        // =====================================================
         // 깨진 옛 세이브 자동 정리
-        // =====================================
+        // =====================================================
 
         SaveGameplayData();
     }
 
 
-    // =====================================
+    // =========================================================
     // Delete Gameplay Save
-    // =====================================
+    // =========================================================
 
     public void DeleteGameplaySave()
     {
         PlayerPrefs.DeleteKey(
             GameplaySaveKey
         );
+
 
         PlayerPrefs.Save();
 
@@ -848,13 +956,17 @@ public class SaveManager : MonoBehaviour
         {
             DungeonTileEventManager.Instance
                 .ClearUsedChestTiles();
+
+
+            DungeonTileEventManager.Instance
+                .ClearUsedKeyTiles();
         }
     }
 
 
-    // =====================================
+    // =========================================================
     // Delete All Save
-    // =====================================
+    // =========================================================
 
     public void DeleteSave()
     {
@@ -878,6 +990,7 @@ public class SaveManager : MonoBehaviour
             GameplaySaveKey
         );
 
+
         PlayerPrefs.Save();
 
 
@@ -885,13 +998,17 @@ public class SaveManager : MonoBehaviour
         {
             DungeonTileEventManager.Instance
                 .ClearUsedChestTiles();
+
+
+            DungeonTileEventManager.Instance
+                .ClearUsedKeyTiles();
         }
     }
 
 
-    // =====================================
+    // =========================================================
     // Debug
-    // =====================================
+    // =========================================================
 
     [ContextMenu(
         "TEST - Save Gameplay"

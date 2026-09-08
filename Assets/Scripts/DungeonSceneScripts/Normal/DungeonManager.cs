@@ -114,6 +114,23 @@ public class DungeonManager : MonoBehaviour
     // 이동
     // ============================
 
+    [ContextMenu("TEST - Move To Key K1")]
+    public void TestMoveToKeyK1()
+    {
+        currentRoom = new Vector2Int(6, 3);
+
+        MarkVisited(currentRoom);
+
+        Save();
+
+        RefreshAll();
+
+        Debug.Log(
+            "[DungeonManager] 테스트 좌표 이동: " +
+            currentRoom
+        );
+    }
+
     public void MoveToNextRoom(
         MoveDirection direction)
     {

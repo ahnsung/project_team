@@ -1152,6 +1152,59 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &194461796
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 194461797}
+  - component: {fileID: 194461798}
+  m_Layer: 0
+  m_Name: KeyRewardDatabase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &194461797
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194461796}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &194461798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194461796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f704a6b81b16ed449600ee0fbf920cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  keyRewards:
+  - keyID: K_1
+    itemID: 3001
+  - keyID: K_2
+    itemID: 3002
+  - keyID: K_3
+    itemID: 3003
+  - keyID: K_4
+    itemID: 3004
 --- !u!1 &202372348
 GameObject:
   m_ObjectHideFlags: 0
@@ -1414,7 +1467,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapWidth: 44
   mapHeight: 43
-  startRoom: {x: 9, y: 0}
+  startRoom: {x: 6, y: 3}
   currentTurn: 0
   currentEnvironment: "\uC9C0\uD558"
   uiManager: {fileID: 117336928}
@@ -2046,6 +2099,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 381750259}
   m_CullTransparentMesh: 1
+--- !u!1 &394080979
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 394080980}
+  - component: {fileID: 394080981}
+  m_Layer: 0
+  m_Name: FarmingItemGroupDatabase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &394080980
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 394080979}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &394080981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 394080979}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c236df64d7ab84f4ca145637f9cd8ed5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  groups:
+  - groupID: I_1
+    itemIDs: e9030000ea030000eb030000
+  - groupID: I_2
+    itemIDs: ec030000ed030000ef030000
 --- !u!1 &417786228
 GameObject:
   m_ObjectHideFlags: 0
@@ -3433,7 +3535,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 542617776}
   m_OnClick:
     m_PersistentCalls:
@@ -3854,6 +3956,7 @@ MonoBehaviour:
   scrapIcon: {fileID: 126008238625568520, guid: 20a4f4f66e679604b8e0f0cc2dcb9637, type: 3}
   testWeaponIcon: {fileID: 7766057500886956902, guid: 3b8f34101eb5ebe4bb9e4cce44973102, type: 3}
   testArmorIcon: {fileID: -6470460504253458178, guid: 04bc5d92c33544b4885101836c4d7d56, type: 3}
+  keyIcon: {fileID: 21300000, guid: 561e8b52894465a4aa5f66d23d6189ce, type: 3}
 --- !u!1 &582991978
 GameObject:
   m_ObjectHideFlags: 0
@@ -5549,6 +5652,51 @@ MonoBehaviour:
   slotType: 2
   equippedIcon: {fileID: 1648039302}
   slotButton: {fileID: 776028208}
+--- !u!1 &792809842
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 792809843}
+  - component: {fileID: 792809844}
+  m_Layer: 0
+  m_Name: KeyDataLoader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &792809843
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 792809842}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &792809844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 792809842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6543c5b9aa74dc42837fb44e1640d71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  keyDataCsv: {fileID: 4900000, guid: 4a8c01abac049e54294918677735d2bd, type: 3}
 --- !u!1 &818823548
 GameObject:
   m_ObjectHideFlags: 0
@@ -5590,6 +5738,9 @@ Transform:
   - {fileID: 1035285174}
   - {fileID: 33264620}
   - {fileID: 1641298127}
+  - {fileID: 394080980}
+  - {fileID: 792809843}
+  - {fileID: 194461797}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &846517665
@@ -7869,7 +8020,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 1008368382}
   m_OnClick:
     m_PersistentCalls:
@@ -8826,7 +8977,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 1096609510}
   m_OnClick:
     m_PersistentCalls:
@@ -10357,7 +10508,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1260835369
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11235,7 +11386,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dungeonManager: {fileID: 268140400}
   battleManager: {fileID: 1052808771}
-  monsterBattleChance: 0
+  generalBattleStartChance: 10
+  generalBattleIncreaseAmount: 10
 --- !u!1 &1350040349
 GameObject:
   m_ObjectHideFlags: 0
@@ -13895,6 +14047,7 @@ GameObject:
   - component: {fileID: 1836735081}
   - component: {fileID: 1836735082}
   - component: {fileID: 1836735084}
+  - component: {fileID: 1836735085}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -13991,6 +14144,9 @@ MonoBehaviour:
   fadeController: {fileID: 2125530133}
   tileEventManager: {fileID: 1335945803}
   cameraRoomTransition: {fileID: 1446980067}
+  state: 0
+  isTransitioning: 0
+  isInteracting: 0
 --- !u!114 &1836735080
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14066,6 +14222,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   activeEffects: []
+--- !u!114 &1836735085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1836735076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d27683dec3446b4468349d87b600716d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerCenterPoint: {fileID: 2124215747}
+  dungeonManager: {fileID: 268140400}
+  uiManager: {fileID: 117336928}
+  fadeController: {fileID: 2125530133}
+  tileEventManager: {fileID: 1335945803}
+  cameraRoomTransition: {fileID: 1446980067}
 --- !u!1 &1855023532
 GameObject:
   m_ObjectHideFlags: 0
@@ -15718,7 +15892,7 @@ Transform:
   m_GameObject: {fileID: 2124215746}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 7.42, y: -0.7, z: 0}
+  m_LocalPosition: {x: 4.23, y: 0.8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15801,7 +15975,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 2125243373}
   m_OnClick:
     m_PersistentCalls:
