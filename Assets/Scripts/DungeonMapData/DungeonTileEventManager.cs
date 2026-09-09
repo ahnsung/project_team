@@ -1447,4 +1447,16 @@ public class DungeonTileEventManager : MonoBehaviour
             );
         }
     }
+    // =========================================================
+    // Farming Visual State
+    // =========================================================
+
+    public bool IsFarmingUsed(
+        Vector2Int position)
+    {
+        return
+            usedFarmingTiles.Contains(
+                position
+            );
+    }
 }
