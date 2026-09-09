@@ -12,26 +12,19 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
     // =========================================================
-    // 사용 완료 타일
+    // Used Tiles
     // =========================================================
 
-    // Chest:
-    // 저장되는 영구 상태
     private readonly HashSet<Vector2Int>
         usedChestTiles =
             new HashSet<Vector2Int>();
 
 
-    // Key:
-    // 획득한 열쇠 타일.
-    // SaveManager에 저장한다.
     private readonly HashSet<Vector2Int>
         usedKeyTiles =
             new HashSet<Vector2Int>();
 
 
-    // Farming:
-    // 현재 던전 입장 동안만 유지.
     private readonly HashSet<Vector2Int>
         usedFarmingTiles =
             new HashSet<Vector2Int>();
@@ -42,11 +35,15 @@ public class DungeonTileEventManager : MonoBehaviour
     // =========================================================
 
     [Header("References")]
+
     [SerializeField]
     private DungeonManager dungeonManager;
 
     [SerializeField]
     private BattleManager battleManager;
+
+    [SerializeField]
+    private FadeController fadeController;
 
 
     // =========================================================
@@ -83,17 +80,19 @@ public class DungeonTileEventManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null &&
-            Instance != this)
+        if (
+            Instance != null &&
+            Instance != this
+        )
         {
             Destroy(gameObject);
             return;
         }
 
+
         Instance = this;
 
 
-        // General 전투 확률 초기값
         ResetGeneralBattleChance();
     }
 
@@ -116,13 +115,24 @@ public class DungeonTileEventManager : MonoBehaviour
         if (battleManager == null)
         {
             battleManager =
-                FindFirstObjectByType<BattleManager>();
+                FindFirstObjectByType<
+                    BattleManager
+                >();
+        }
+
+
+        if (fadeController == null)
+        {
+            fadeController =
+                FindFirstObjectByType<
+                    FadeController
+                >();
         }
     }
 
 
     // =========================================================
-    // 타일 진입 시 자동 이벤트
+    // Enter Event
     // =========================================================
 
     public IEnumerator ExecuteEnterEvent()
@@ -165,34 +175,36 @@ public class DungeonTileEventManager : MonoBehaviour
 
         switch (tile.TileType)
         {
-            // General에서만 일반 랜덤 전투
             case DungeonTileType.General:
 
                 yield return
-                    HandleGeneralEnter(tile);
+                    HandleGeneralEnter(
+                        tile
+                    );
 
                 break;
 
 
-            // Trap은 진입 즉시 자동 판정
             case DungeonTileType.Trap:
 
                 yield return
-                    HandleTrapEnter(tile);
+                    HandleTrapEnter(
+                        tile
+                    );
 
                 break;
 
 
-            // Teleport는 진입 즉시 자동 발동
             case DungeonTileType.Teleport:
 
                 yield return
-                    HandleTeleportEnter(tile);
+                    HandleTeleportEnter(
+                        tile
+                    );
 
                 break;
 
 
-            // 나머지는 E 상호작용
             default:
 
                 break;
@@ -201,7 +213,7 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
     // =========================================================
-    // E 키 상호작용
+    // E Interaction
     // =========================================================
 
     public IEnumerator ExecuteInteraction()
@@ -211,11 +223,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (dungeonManager == null)
         {
-            Debug.LogError(
-                "[DungeonTileEventManager] " +
-                "DungeonManager가 없습니다."
-            );
-
             yield break;
         }
 
@@ -226,11 +233,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (tile == null)
         {
-            Debug.LogWarning(
-                "[DungeonTileEventManager] " +
-                "현재 타일 데이터가 없습니다."
-            );
-
             yield break;
         }
 
@@ -247,7 +249,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.Farming:
 
                 yield return
-                    HandleFarming(tile);
+                    HandleFarming(
+                        tile
+                    );
 
                 break;
 
@@ -255,7 +259,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.Key:
 
                 yield return
-                    HandleKey(tile);
+                    HandleKey(
+                        tile
+                    );
 
                 break;
 
@@ -263,7 +269,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.Chest:
 
                 yield return
-                    HandleChest(tile);
+                    HandleChest(
+                        tile
+                    );
 
                 break;
 
@@ -271,7 +279,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.PuzzleLetter:
 
                 yield return
-                    HandlePuzzleLetter(tile);
+                    HandlePuzzleLetter(
+                        tile
+                    );
 
                 break;
 
@@ -279,7 +289,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.EventHint:
 
                 yield return
-                    HandleEventHint(tile);
+                    HandleEventHint(
+                        tile
+                    );
 
                 break;
 
@@ -287,7 +299,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.Rest:
 
                 yield return
-                    HandleRest(tile);
+                    HandleRest(
+                        tile
+                    );
 
                 break;
 
@@ -295,7 +309,9 @@ public class DungeonTileEventManager : MonoBehaviour
             case DungeonTileType.Boss:
 
                 yield return
-                    HandleBoss(tile);
+                    HandleBoss(
+                        tile
+                    );
 
                 break;
 
@@ -314,7 +330,7 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
     // =========================================================
-    // 현재 타일이 E 상호작용 가능한지
+    // Can Interact
     // =========================================================
 
     public bool CanInteractCurrentTile()
@@ -323,7 +339,9 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
         if (dungeonManager == null)
+        {
             return false;
+        }
 
 
         DungeonTileData tile =
@@ -331,7 +349,9 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
         if (tile == null)
+        {
             return false;
+        }
 
 
         switch (tile.TileType)
@@ -370,10 +390,6 @@ public class DungeonTileEventManager : MonoBehaviour
         );
 
 
-        // -----------------------------------------------------
-        // 현재 누적 확률로 전투 판정
-        // -----------------------------------------------------
-
         float roll =
             Random.Range(
                 0f,
@@ -393,10 +409,6 @@ public class DungeonTileEventManager : MonoBehaviour
             $"주사위 값: {roll:F2}"
         );
 
-
-        // -----------------------------------------------------
-        // 전투 미발생
-        // -----------------------------------------------------
 
         if (!battleOccurs)
         {
@@ -425,18 +437,12 @@ public class DungeonTileEventManager : MonoBehaviour
         }
 
 
-        // -----------------------------------------------------
-        // 전투 판정 성공
-        // -----------------------------------------------------
-
         if (battleManager == null)
         {
             Debug.LogWarning(
-                "[General] 전투 판정에는 성공했지만 " +
-                "BattleManager가 없습니다.\n" +
-                "확률은 초기화하지 않습니다."
+                "[General] 전투 판정 성공했지만 " +
+                "BattleManager가 없습니다."
             );
-
 
             yield break;
         }
@@ -444,39 +450,23 @@ public class DungeonTileEventManager : MonoBehaviour
 
         Debug.Log(
             "[General] 전투 발생!\n" +
-            $"전투 발생 확률: " +
-            $"{currentGeneralBattleChance:F0}%\n" +
-            $"주사위 값: {roll:F2}"
-        );
-
-
-        // -----------------------------------------------------
-        // 실제 전투가 발생하므로
-        // 다음 확률을 10%로 초기화
-        // -----------------------------------------------------
-
-        ResetGeneralBattleChance();
-
-
-        Debug.Log(
-            "[General] 전투 확률 초기화\n" +
-            $"다음 General 전투 확률: " +
+            $"확률: " +
             $"{currentGeneralBattleChance:F0}%"
         );
 
 
-        // -----------------------------------------------------
-        // 기존 전투 시스템 실행
-        // -----------------------------------------------------
+        ResetGeneralBattleChance();
+
 
         yield return StartCoroutine(
-            battleManager.StartBattleEncounter()
+            battleManager
+                .StartBattleEncounter()
         );
 
 
-        // 전투가 끝날 때까지 대기
         while (
-            battleManager.IsBattleRunning())
+            battleManager.IsBattleRunning()
+        )
         {
             yield return null;
         }
@@ -487,10 +477,6 @@ public class DungeonTileEventManager : MonoBehaviour
         );
     }
 
-
-    // =========================================================
-    // General Battle Chance
-    // =========================================================
 
     public void ResetGeneralBattleChance()
     {
@@ -517,54 +503,45 @@ public class DungeonTileEventManager : MonoBehaviour
             );
 
 
-        // -----------------------------------------------------
-        // 이미 사용한 Farming 타일
-        // -----------------------------------------------------
-
-        if (usedFarmingTiles.Contains(
-            position))
+        if (
+            usedFarmingTiles.Contains(
+                position
+            )
+        )
         {
             Debug.Log(
-                "[Farming] 이미 파밍한 장소입니다.\n" +
-                "던전을 나갔다 다시 들어오면 " +
-                "다시 사용할 수 있습니다."
+                "[Farming] 이미 파밍한 장소입니다."
             );
 
             yield break;
         }
 
 
-        // -----------------------------------------------------
-        // Farming Data
-        // -----------------------------------------------------
-
-        FarmingDataLoader farmingLoader =
+        FarmingDataLoader loader =
             FarmingDataLoader.Instance;
 
 
-        if (farmingLoader == null)
+        if (loader == null)
         {
             Debug.LogError(
-                "[Farming] FarmingDataLoader를 " +
-                "찾을 수 없습니다."
+                "[Farming] FarmingDataLoader가 없습니다."
             );
 
             yield break;
         }
 
 
-        FarmingTileData farmingData =
-            farmingLoader.GetData(
+        FarmingTileData data =
+            loader.GetData(
                 tile.X,
                 tile.Y
             );
 
 
-        if (farmingData == null)
+        if (data == null)
         {
             Debug.LogWarning(
-                "[Farming] Farming 타일인데 " +
-                "Farming_Data가 없습니다.\n" +
+                "[Farming] Farming_Data가 없습니다.\n" +
                 $"좌표: ({tile.X}, {tile.Y})"
             );
 
@@ -572,59 +549,39 @@ public class DungeonTileEventManager : MonoBehaviour
         }
 
 
-        // -----------------------------------------------------
-        // ItemGroup Database
-        // -----------------------------------------------------
-
         FarmingItemGroupDatabase
-            itemGroupDatabase =
+            groupDatabase =
                 FarmingItemGroupDatabase.Instance;
 
 
-        if (itemGroupDatabase == null)
+        if (groupDatabase == null)
         {
-            Debug.LogError(
-                "[Farming] " +
-                "FarmingItemGroupDatabase를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
 
-        List<int> groupItemIDs =
-            itemGroupDatabase.GetItemIDs(
-                farmingData.itemGroup
+        List<int> itemIDs =
+            groupDatabase.GetItemIDs(
+                data.itemGroup
             );
 
 
-        if (groupItemIDs == null ||
-            groupItemIDs.Count == 0)
+        if (
+            itemIDs == null ||
+            itemIDs.Count == 0
+        )
         {
-            Debug.LogWarning(
-                "[Farming] ItemGroup에 " +
-                "아이템이 없습니다.\n" +
-                $"ItemGroup: " +
-                $"{farmingData.itemGroup}"
-            );
-
             yield break;
         }
 
-
-        // -----------------------------------------------------
-        // 수량 추첨
-        // -----------------------------------------------------
 
         int amount =
             Random.Range(
-                farmingData.minItemQuantity,
-                farmingData.maxItemQuantity + 1
+                data.minItemQuantity,
+                data.maxItemQuantity + 1
             );
 
 
-        // 보상창 최대 6개
         amount =
             Mathf.Clamp(
                 amount,
@@ -633,23 +590,6 @@ public class DungeonTileEventManager : MonoBehaviour
             );
 
 
-        Debug.Log(
-            "[Farming] 파밍 시작\n" +
-            $"좌표: ({tile.X}, {tile.Y})\n" +
-            $"ItemGroup: " +
-            $"{farmingData.itemGroup}\n" +
-            $"수량 범위: " +
-            $"{farmingData.minItemQuantity}" +
-            "~" +
-            $"{farmingData.maxItemQuantity}\n" +
-            $"이번 추첨 수량: {amount}"
-        );
-
-
-        // -----------------------------------------------------
-        // Reward 생성
-        // -----------------------------------------------------
-
         List<ChestItemData> rewards =
             new List<ChestItemData>();
 
@@ -657,59 +597,38 @@ public class DungeonTileEventManager : MonoBehaviour
         for (
             int i = 0;
             i < amount;
-            i++)
+            i++
+        )
         {
-            int randomIndex =
-                Random.Range(
-                    0,
-                    groupItemIDs.Count
-                );
-
-
             int itemID =
-                groupItemIDs[
-                    randomIndex
+                itemIDs[
+                    Random.Range(
+                        0,
+                        itemIDs.Count
+                    )
                 ];
 
 
             if (itemID <= 0)
             {
-                Debug.LogWarning(
-                    "[Farming] 잘못된 ItemID를 " +
-                    "건너뜁니다: " +
-                    itemID
-                );
-
                 continue;
             }
 
 
-            ChestItemData reward =
+            rewards.Add(
                 new ChestItemData(
                     itemID,
                     1
-                );
-
-
-            rewards.Add(
-                reward
+                )
             );
         }
 
 
         if (rewards.Count == 0)
         {
-            Debug.LogWarning(
-                "[Farming] 생성된 보상이 없습니다."
-            );
-
             yield break;
         }
 
-
-        // -----------------------------------------------------
-        // Reward UI
-        // -----------------------------------------------------
 
         DungeonRewardUI rewardUI =
             DungeonRewardUI.Instance;
@@ -717,11 +636,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (rewardUI == null)
         {
-            Debug.LogError(
-                "[Farming] DungeonRewardUI를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
@@ -731,10 +645,6 @@ public class DungeonTileEventManager : MonoBehaviour
                 rewards
             );
 
-
-        // -----------------------------------------------------
-        // 실제 획득 여부
-        // -----------------------------------------------------
 
         if (rewardUI.AnyItemAcquired)
         {
@@ -748,13 +658,6 @@ public class DungeonTileEventManager : MonoBehaviour
                 position
             );
         }
-        else
-        {
-            Debug.Log(
-                "[Farming] 획득한 아이템 없음: " +
-                position
-            );
-        }
     }
 
 
@@ -765,33 +668,31 @@ public class DungeonTileEventManager : MonoBehaviour
     private IEnumerator HandleTrapEnter(
         DungeonTileData tile)
     {
-        TrapDataLoader trapLoader =
+        TrapDataLoader loader =
             TrapDataLoader.Instance;
 
 
-        if (trapLoader == null)
+        if (loader == null)
         {
             Debug.LogError(
-                "[TileEvent] TrapDataLoader를 " +
-                "찾을 수 없습니다."
+                "[Trap] TrapDataLoader가 없습니다."
             );
 
             yield break;
         }
 
 
-        TrapTileData trapData =
-            trapLoader.GetData(
+        TrapTileData data =
+            loader.GetData(
                 tile.X,
                 tile.Y
             );
 
 
-        if (trapData == null)
+        if (data == null)
         {
             Debug.LogWarning(
-                "[TileEvent] Trap 타일인데 " +
-                "Trap_Data가 없습니다.\n" +
+                "[Trap] Trap_Data가 없습니다.\n" +
                 $"좌표: ({tile.X}, {tile.Y})"
             );
 
@@ -808,17 +709,15 @@ public class DungeonTileEventManager : MonoBehaviour
 
         bool triggered =
             roll <
-            trapData.trapPossibility;
+            data.trapPossibility;
 
 
         Debug.Log(
             "[Trap] 함정 판정\n" +
-            $"좌표: " +
-            $"({trapData.x}, {trapData.y})\n" +
-            $"TrapType: {trapData.trapType}\n" +
-            $"발동 확률: " +
-            $"{trapData.trapPossibility}%\n" +
-            $"주사위 값: {roll:F2}"
+            $"좌표: ({tile.X}, {tile.Y})\n" +
+            $"TrapType: {data.trapType}\n" +
+            $"확률: {data.trapPossibility}%\n" +
+            $"Roll: {roll:F2}"
         );
 
 
@@ -834,38 +733,161 @@ public class DungeonTileEventManager : MonoBehaviour
 
         Debug.Log(
             "[Trap] 함정 발동!\n" +
-            $"TrapType: {trapData.trapType}\n" +
-            $"지속 턴: {trapData.trapAmount}"
+            $"TrapType: {data.trapType}\n" +
+            $"지속 턴: {data.trapAmount}"
         );
 
-
-        /*
-         * TrapType 1~6 실제 효과는
-         * 기획 데이터 확정 후 연결.
-         */
 
         yield break;
     }
 
 
     // =========================================================
-    // Teleport
+    // TELEPORT
     // =========================================================
 
     private IEnumerator HandleTeleportEnter(
         DungeonTileData tile)
     {
+        ResolveReferences();
+
+
+        if (dungeonManager == null)
+        {
+            Debug.LogError(
+                "[Teleport] DungeonManager가 없습니다."
+            );
+
+            yield break;
+        }
+
+
+        TeleportDataLoader loader =
+            TeleportDataLoader.Instance;
+
+
+        if (loader == null)
+        {
+            Debug.LogError(
+                "[Teleport] " +
+                "TeleportDataLoader가 없습니다."
+            );
+
+            yield break;
+        }
+
+
+        Vector2Int currentPosition =
+            new Vector2Int(
+                tile.X,
+                tile.Y
+            );
+
+
+        TeleportTileData teleportData =
+            loader.GetData(
+                currentPosition
+            );
+
+
+        if (teleportData == null)
+        {
+            Debug.LogWarning(
+                "[Teleport] Teleport 타일인데 " +
+                "Teleport_Data가 없습니다.\n" +
+                $"좌표: {currentPosition}"
+            );
+
+            yield break;
+        }
+
+
+        if (
+            !loader.TryGetDestination(
+                currentPosition,
+                out Vector2Int destination
+            )
+        )
+        {
+            Debug.LogError(
+                "[Teleport] 연결된 목적지를 찾지 못했습니다.\n" +
+                $"현재 위치: {currentPosition}\n" +
+                $"ID: {teleportData.connectedTeleportID}"
+            );
+
+            yield break;
+        }
+
+
         Debug.Log(
-            "[TileEvent] Teleport 자동 이벤트: " +
-            $"({tile.X}, {tile.Y})"
+            "[Teleport] 위치 변이기 발동\n" +
+            $"ID: {teleportData.connectedTeleportID}\n" +
+            $"출발: {currentPosition}\n" +
+            $"도착: {destination}"
         );
 
 
+        // Fade Out
+        if (fadeController != null)
+        {
+            yield return
+                fadeController.FadeOut();
+        }
+
+
+        bool moved =
+            dungeonManager.TeleportToRoom(
+                destination
+            );
+
+
+        if (!moved)
+        {
+            Debug.LogError(
+                "[Teleport] 텔레포트 이동 실패"
+            );
+
+
+            if (fadeController != null)
+            {
+                yield return
+                    fadeController.FadeIn();
+            }
+
+
+            yield break;
+        }
+
+
+        yield return null;
+
+
+        // Fade In
+        if (fadeController != null)
+        {
+            yield return
+                fadeController.FadeIn();
+        }
+
+
         /*
-         * Teleport는 다음 단계에서 구현.
+         * 여기서 ExecuteEnterEvent()를
+         * 다시 호출하지 않는다.
+         *
+         * 도착지 역시 Teleport 타일이라
+         * 재호출하면
+         *
+         * A -> B -> A -> B...
+         *
+         * 무한 왕복하기 때문.
          */
 
-        yield break;
+
+        Debug.Log(
+            "[Teleport] 이동 완료\n" +
+            $"현재 위치: " +
+            $"{dungeonManager.CurrentRoom}"
+        );
     }
 
 
@@ -883,12 +905,11 @@ public class DungeonTileEventManager : MonoBehaviour
             );
 
 
-        // -----------------------------------------------------
-        // 이미 획득한 열쇠
-        // -----------------------------------------------------
-
-        if (usedKeyTiles.Contains(
-            position))
+        if (
+            usedKeyTiles.Contains(
+                position
+            )
+        )
         {
             Debug.Log(
                 "[Key] 이미 획득한 열쇠입니다: " +
@@ -899,27 +920,18 @@ public class DungeonTileEventManager : MonoBehaviour
         }
 
 
-        // -----------------------------------------------------
-        // Key Data
-        // -----------------------------------------------------
-
-        KeyDataLoader keyLoader =
+        KeyDataLoader loader =
             KeyDataLoader.Instance;
 
 
-        if (keyLoader == null)
+        if (loader == null)
         {
-            Debug.LogError(
-                "[Key] KeyDataLoader를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
 
         KeyTileData keyData =
-            keyLoader.GetData(
+            loader.GetData(
                 tile.X,
                 tile.Y
             );
@@ -927,61 +939,34 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (keyData == null)
         {
-            Debug.LogWarning(
-                "[Key] Key 타일인데 " +
-                "Key_Data가 없습니다.\n" +
-                $"좌표: ({tile.X}, {tile.Y})"
-            );
-
             yield break;
         }
 
 
-        // -----------------------------------------------------
-        // KeyID -> ItemID
-        // -----------------------------------------------------
-
         KeyRewardDatabase
-            keyRewardDatabase =
+            rewardDatabase =
                 KeyRewardDatabase.Instance;
 
 
-        if (keyRewardDatabase == null)
+        if (rewardDatabase == null)
         {
-            Debug.LogError(
-                "[Key] KeyRewardDatabase를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
 
-        if (!keyRewardDatabase.TryGetItemID(
-            keyData.keyID,
-            out int itemID))
+        if (
+            !rewardDatabase.TryGetItemID(
+                keyData.keyID,
+                out int itemID
+            )
+        )
         {
-            Debug.LogError(
-                "[Key] KeyID에 대응하는 " +
-                "ItemID가 없습니다.\n" +
-                $"KeyID: {keyData.keyID}"
-            );
-
             yield break;
         }
 
-
-        // -----------------------------------------------------
-        // ItemDatabase 검증
-        // -----------------------------------------------------
 
         if (ItemDatabase.Instance == null)
         {
-            Debug.LogError(
-                "[Key] ItemDatabase를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
@@ -994,19 +979,9 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (itemData == null)
         {
-            Debug.LogError(
-                "[Key] ItemDatabase에 " +
-                "열쇠 아이템이 없습니다.\n" +
-                $"ItemID: {itemID}"
-            );
-
             yield break;
         }
 
-
-        // -----------------------------------------------------
-        // Reward UI
-        // -----------------------------------------------------
 
         DungeonRewardUI rewardUI =
             DungeonRewardUI.Instance;
@@ -1014,46 +989,25 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (rewardUI == null)
         {
-            Debug.LogError(
-                "[Key] DungeonRewardUI를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
 
         List<ChestItemData> rewards =
-            new List<ChestItemData>();
+            new List<ChestItemData>
+            {
+                new ChestItemData(
+                    itemID,
+                    1
+                )
+            };
 
 
-        rewards.Add(
-            new ChestItemData(
-                itemID,
-                1
-            )
-        );
-
-
-        Debug.Log(
-            "[Key] 열쇠 발견\n" +
-            $"좌표: ({tile.X}, {tile.Y})\n" +
-            $"KeyID: {keyData.keyID}\n" +
-            $"ItemID: {itemID}\n" +
-            $"ItemName: {itemData.itemName}"
-        );
-
-
-        // 기존 Chest/Farming 보상창 재사용
         yield return
             rewardUI.ShowChestRewards(
                 rewards
             );
 
-
-        // -----------------------------------------------------
-        // 실제 획득 성공
-        // -----------------------------------------------------
 
         if (rewardUI.AnyItemAcquired)
         {
@@ -1064,7 +1018,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
             Debug.Log(
                 "[Key] 열쇠 획득 완료\n" +
-                $"좌표: {position}\n" +
                 $"KeyID: {keyData.keyID}\n" +
                 $"ItemID: {itemID}"
             );
@@ -1075,13 +1028,6 @@ public class DungeonTileEventManager : MonoBehaviour
                 SaveManager.Instance
                     .SaveGameplayData();
             }
-        }
-        else
-        {
-            Debug.Log(
-                "[Key] 열쇠를 획득하지 않았습니다: " +
-                position
-            );
         }
     }
 
@@ -1100,8 +1046,11 @@ public class DungeonTileEventManager : MonoBehaviour
             );
 
 
-        if (usedChestTiles.Contains(
-            position))
+        if (
+            usedChestTiles.Contains(
+                position
+            )
+        )
         {
             Debug.Log(
                 "[Chest] 이미 사용한 상자입니다: " +
@@ -1112,68 +1061,46 @@ public class DungeonTileEventManager : MonoBehaviour
         }
 
 
-        ChestDataLoader chestLoader =
+        ChestDataLoader loader =
             ChestDataLoader.Instance;
 
 
-        if (chestLoader == null)
+        if (loader == null)
         {
-            Debug.LogError(
-                "[TileEvent] ChestDataLoader를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
 
-        ChestTileData chestData =
-            chestLoader.GetData(
+        ChestTileData data =
+            loader.GetData(
                 tile.X,
                 tile.Y
             );
 
 
-        if (chestData == null)
+        if (data == null)
         {
-            Debug.LogWarning(
-                "[TileEvent] Chest 타일인데 " +
-                "Chest_Data가 없습니다.\n" +
-                $"좌표: ({tile.X}, {tile.Y})"
-            );
-
             yield break;
         }
 
 
-        if (DungeonRewardUI.Instance == null)
-        {
-            Debug.LogError(
-                "[Chest] DungeonRewardUI를 " +
-                "찾을 수 없습니다."
-            );
+        DungeonRewardUI rewardUI =
+            DungeonRewardUI.Instance;
 
+
+        if (rewardUI == null)
+        {
             yield break;
         }
-
-
-        Debug.Log(
-            "[Chest] 상자 열기\n" +
-            $"좌표: ({tile.X}, {tile.Y})\n" +
-            $"보상 종류: " +
-            $"{chestData.items.Count}개"
-        );
 
 
         yield return
-            DungeonRewardUI.Instance
-                .ShowChestRewards(
-                    chestData.items
-                );
+            rewardUI.ShowChestRewards(
+                data.items
+            );
 
 
-        if (DungeonRewardUI.Instance
-            .AnyItemAcquired)
+        if (rewardUI.AnyItemAcquired)
         {
             usedChestTiles.Add(
                 position
@@ -1192,13 +1119,6 @@ public class DungeonTileEventManager : MonoBehaviour
                     .SaveGameplayData();
             }
         }
-        else
-        {
-            Debug.Log(
-                "[Chest] 획득한 아이템 없음: " +
-                position
-            );
-        }
     }
 
 
@@ -1215,11 +1135,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (puzzleUI == null)
         {
-            Debug.LogError(
-                "[TileEvent] PuzzleLetterUI를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
@@ -1227,12 +1142,6 @@ public class DungeonTileEventManager : MonoBehaviour
         string message =
             "단서를 발견했습니다.\n\n" +
             $"좌표: ({tile.X}, {tile.Y})";
-
-
-        Debug.Log(
-            "[TileEvent] Puzzle/Letter 상호작용: " +
-            $"({tile.X}, {tile.Y})"
-        );
 
 
         yield return StartCoroutine(
@@ -1251,7 +1160,7 @@ public class DungeonTileEventManager : MonoBehaviour
         DungeonTileData tile)
     {
         Debug.Log(
-            "[TileEvent] Event/Hint 상호작용 예정: " +
+            "[TileEvent] Event/Hint 예정: " +
             $"({tile.X}, {tile.Y})"
         );
 
@@ -1273,11 +1182,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (restManager == null)
         {
-            Debug.LogError(
-                "[TileEvent] RestTileManager를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
@@ -1289,14 +1193,14 @@ public class DungeonTileEventManager : MonoBehaviour
             );
 
 
-        if (!restManager.CanRest(
-            position))
+        if (
+            !restManager.CanRest(
+                position
+            )
+        )
         {
             Debug.Log(
-                "[TileEvent] 이 장소에서는 " +
-                "이미 휴식했습니다.\n" +
-                "던전을 나갔다 다시 들어와야 " +
-                "다시 휴식할 수 있습니다."
+                "[Rest] 이미 휴식한 장소입니다."
             );
 
             yield break;
@@ -1309,11 +1213,6 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (confirmUI == null)
         {
-            Debug.LogError(
-                "[TileEvent] RestConfirmUI를 " +
-                "찾을 수 없습니다."
-            );
-
             yield break;
         }
 
@@ -1325,27 +1224,13 @@ public class DungeonTileEventManager : MonoBehaviour
 
         if (!confirmUI.GetResult())
         {
-            Debug.Log(
-                "[TileEvent] 휴식을 취소했습니다."
-            );
-
             yield break;
         }
 
 
-        bool success =
-            restManager.Rest(
-                position
-            );
-
-
-        if (success)
-        {
-            Debug.Log(
-                "[TileEvent] Rest 완료: " +
-                $"({tile.X}, {tile.Y})"
-            );
-        }
+        restManager.Rest(
+            position
+        );
     }
 
 
@@ -1357,7 +1242,7 @@ public class DungeonTileEventManager : MonoBehaviour
         DungeonTileData tile)
     {
         Debug.Log(
-            "[TileEvent] Boss 상호작용 예정: " +
+            "[Boss] 구현 예정: " +
             $"({tile.X}, {tile.Y})"
         );
 
@@ -1379,7 +1264,8 @@ public class DungeonTileEventManager : MonoBehaviour
 
         foreach (
             Vector2Int position
-            in usedChestTiles)
+            in usedChestTiles
+        )
         {
             result.Add(
                 $"{position.x},{position.y}"
@@ -1397,52 +1283,10 @@ public class DungeonTileEventManager : MonoBehaviour
         usedChestTiles.Clear();
 
 
-        if (savedTiles == null)
-            return;
-
-
-        foreach (
-            string entry
-            in savedTiles)
-        {
-            if (string.IsNullOrWhiteSpace(
-                entry))
-            {
-                continue;
-            }
-
-
-            string[] parts =
-                entry.Split(',');
-
-
-            if (parts.Length != 2)
-                continue;
-
-
-            if (!int.TryParse(
-                parts[0],
-                out int x))
-            {
-                continue;
-            }
-
-
-            if (!int.TryParse(
-                parts[1],
-                out int y))
-            {
-                continue;
-            }
-
-
-            usedChestTiles.Add(
-                new Vector2Int(
-                    x,
-                    y
-                )
-            );
-        }
+        RestorePositionList(
+            savedTiles,
+            usedChestTiles
+        );
 
 
         Debug.Log(
@@ -1472,7 +1316,8 @@ public class DungeonTileEventManager : MonoBehaviour
 
         foreach (
             Vector2Int position
-            in usedKeyTiles)
+            in usedKeyTiles
+        )
         {
             result.Add(
                 $"{position.x},{position.y}"
@@ -1490,52 +1335,10 @@ public class DungeonTileEventManager : MonoBehaviour
         usedKeyTiles.Clear();
 
 
-        if (savedTiles == null)
-            return;
-
-
-        foreach (
-            string entry
-            in savedTiles)
-        {
-            if (string.IsNullOrWhiteSpace(
-                entry))
-            {
-                continue;
-            }
-
-
-            string[] parts =
-                entry.Split(',');
-
-
-            if (parts.Length != 2)
-                continue;
-
-
-            if (!int.TryParse(
-                parts[0],
-                out int x))
-            {
-                continue;
-            }
-
-
-            if (!int.TryParse(
-                parts[1],
-                out int y))
-            {
-                continue;
-            }
-
-
-            usedKeyTiles.Add(
-                new Vector2Int(
-                    x,
-                    y
-                )
-            );
-        }
+        RestorePositionList(
+            savedTiles,
+            usedKeyTiles
+        );
 
 
         Debug.Log(
@@ -1550,6 +1353,7 @@ public class DungeonTileEventManager : MonoBehaviour
     {
         usedKeyTiles.Clear();
 
+
         Debug.Log(
             "[Key] 사용 기록 초기화"
         );
@@ -1557,15 +1361,90 @@ public class DungeonTileEventManager : MonoBehaviour
 
 
     // =========================================================
-    // Farming Reset
+    // Farming
     // =========================================================
 
     public void ClearUsedFarmingTiles()
     {
         usedFarmingTiles.Clear();
 
+
         Debug.Log(
             "[Farming] 사용 기록 초기화"
         );
+    }
+
+
+    // =========================================================
+    // Save Parse Helper
+    // =========================================================
+
+    private void RestorePositionList(
+        List<string> savedTiles,
+        HashSet<Vector2Int> target)
+    {
+        if (
+            savedTiles == null ||
+            target == null
+        )
+        {
+            return;
+        }
+
+
+        foreach (
+            string entry
+            in savedTiles
+        )
+        {
+            if (
+                string.IsNullOrWhiteSpace(
+                    entry
+                )
+            )
+            {
+                continue;
+            }
+
+
+            string[] parts =
+                entry.Split(',');
+
+
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+
+            if (
+                !int.TryParse(
+                    parts[0],
+                    out int x
+                )
+            )
+            {
+                continue;
+            }
+
+
+            if (
+                !int.TryParse(
+                    parts[1],
+                    out int y
+                )
+            )
+            {
+                continue;
+            }
+
+
+            target.Add(
+                new Vector2Int(
+                    x,
+                    y
+                )
+            );
+        }
     }
 }

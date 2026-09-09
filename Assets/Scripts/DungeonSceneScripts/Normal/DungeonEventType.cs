@@ -1,8 +1,16 @@
-public enum DungeonEventType
+public enum DungeonTileType
 {
-    Monster,
-    Merchant,
-    Helper,
+    None,
+    General,
+    Farming,
     Trap,
-    Empty
+    Key,
+    Teleport,
+    Chest,
+    PuzzleLetter,
+    EventHint,
+    Rest,
+    Boss,
+    LockedDoor,
+    Exit
 }

@@ -4,6 +4,10 @@ using UnityEngine.UI;
 
 public class DungeonUIManager : MonoBehaviour
 {
+    // =========================================================
+    // Panels
+    // =========================================================
+
     [Header("Panels")]
     [SerializeField]
     private GameObject directionPanel;
@@ -12,12 +16,12 @@ public class DungeonUIManager : MonoBehaviour
     private GameObject minimapRoot;
 
 
-    [Header("Inventory")]
-    [SerializeField]
-    private GameObject inventoryRoot;
-
+    // =========================================================
+    // Direction Buttons
+    // =========================================================
 
     [Header("Direction Buttons")]
+
     [SerializeField]
     private Button upButton;
 
@@ -31,10 +35,14 @@ public class DungeonUIManager : MonoBehaviour
     private Button rightButton;
 
 
-    [Header("References")]
+    // =========================================================
+    // Reference
+    // =========================================================
+
+    [Header("Reference")]
+
     [SerializeField]
-    private RoomTraversalController
-        roomTraversalController;
+    private RoomTraversalController roomTraversalController;
 
 
     // =========================================================
@@ -51,14 +59,14 @@ public class DungeonUIManager : MonoBehaviour
 
         if (minimapRoot != null)
         {
-            minimapRoot
-                .SetActive(true);
+            minimapRoot.SetActive(true);
         }
-
-
-        CloseInventory();
     }
 
+
+    // =========================================================
+    // References
+    // =========================================================
 
     private void ResolveReferences()
     {
@@ -73,167 +81,162 @@ public class DungeonUIManager : MonoBehaviour
 
 
     // =========================================================
-    // Direction Buttons Refresh
+    // Generic Button Refresh
     // =========================================================
-
-    public void RefreshDirectionButtons(
-        Dictionary<
-            MoveDirection,
-            bool
-        > availableDirections)
-    {
-        if (availableDirections == null)
-            return;
-
-
-        if (upButton != null)
-        {
-            upButton.interactable =
-                availableDirections
-                    .ContainsKey(
-                        MoveDirection.Up
-                    )
-                &&
-                availableDirections[
-                    MoveDirection.Up
-                ];
-        }
-
-
-        if (downButton != null)
-        {
-            downButton.interactable =
-                availableDirections
-                    .ContainsKey(
-                        MoveDirection.Down
-                    )
-                &&
-                availableDirections[
-                    MoveDirection.Down
-                ];
-        }
-
-
-        if (leftButton != null)
-        {
-            leftButton.interactable =
-                availableDirections
-                    .ContainsKey(
-                        MoveDirection.Left
-                    )
-                &&
-                availableDirections[
-                    MoveDirection.Left
-                ];
-        }
-
-
-        if (rightButton != null)
-        {
-            rightButton.interactable =
-                availableDirections
-                    .ContainsKey(
-                        MoveDirection.Right
-                    )
-                &&
-                availableDirections[
-                    MoveDirection.Right
-                ];
-        }
-    }
-
-
-    // =========================================================
-    // Direction Panel
-    // =========================================================
-
-    public void ShowDirectionPanel()
-    {
-        if (directionPanel != null)
-        {
-            directionPanel
-                .SetActive(true);
-        }
-    }
-
-
-    public void HideDirectionPanel()
-    {
-        if (directionPanel != null)
-        {
-            directionPanel
-                .SetActive(false);
-        }
-    }
-
 
     /*
-     * DirectionSelectPanel의
-     * X 버튼에서 호출해야 하는 함수.
+     * DungeonManager.RefreshAll() 등에서
+     * 기존 호환을 위해 남겨두는 함수.
      *
-     * 단순히 HideDirectionPanel()만 호출하면
-     * RoomTraversalController의 상태가
-     * DirectionChoosing으로 남는다.
+     * 이 함수는 버튼 GameObject 자체를 숨기지 않고
+     * interactable만 변경한다.
      */
-    public void OnClickCloseDirectionPanel()
+    public void RefreshDirectionButtons(
+        Dictionary<MoveDirection, bool> availableDirections)
     {
-        ResolveReferences();
+        SetButtonInteractable(
+            upButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Up
+            )
+        );
 
 
-        if (roomTraversalController != null)
-        {
-            roomTraversalController
-                .CloseDirectionPanel();
-        }
-        else
-        {
-            /*
-             * 혹시 Controller가 없을 경우
-             * UI만이라도 닫는다.
-             */
-            HideDirectionPanel();
-        }
-    }
+        SetButtonInteractable(
+            downButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Down
+            )
+        );
 
 
-    // =========================================================
-    // Inventory
-    // =========================================================
-
-    public void OpenInventory()
-    {
-        if (inventoryRoot != null)
-        {
-            inventoryRoot
-                .SetActive(true);
-        }
-    }
+        SetButtonInteractable(
+            leftButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Left
+            )
+        );
 
 
-    public void CloseInventory()
-    {
-        if (inventoryRoot != null)
-        {
-            inventoryRoot
-                .SetActive(false);
-        }
-    }
-
-
-    public void ToggleInventory()
-    {
-        if (inventoryRoot == null)
-            return;
-
-
-        inventoryRoot.SetActive(
-            !inventoryRoot.activeSelf
+        SetButtonInteractable(
+            rightButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Right
+            )
         );
     }
 
 
     // =========================================================
-    // Direction Button Click
+    // Special Direction Panel
+    // =========================================================
+
+    /*
+     * Space 입력 전용.
+     *
+     * Door / OneWay 등 실제 사용 가능한 방향만
+     * 화면에 표시한다.
+     *
+     * false인 방향 버튼은
+     * 비활성화가 아니라 GameObject 자체를 숨긴다.
+     */
+    public void ShowSpecialDirectionPanel(
+        Dictionary<MoveDirection, bool> availableDirections)
+    {
+        ResolveReferences();
+
+
+        SetButtonVisible(
+            upButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Up
+            )
+        );
+
+
+        SetButtonVisible(
+            downButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Down
+            )
+        );
+
+
+        SetButtonVisible(
+            leftButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Left
+            )
+        );
+
+
+        SetButtonVisible(
+            rightButton,
+            IsAvailable(
+                availableDirections,
+                MoveDirection.Right
+            )
+        );
+
+
+        if (directionPanel != null)
+        {
+            directionPanel.SetActive(true);
+        }
+
+
+        Debug.Log(
+            "[DungeonUIManager] " +
+            "특수 이동 방향 패널 표시"
+        );
+    }
+
+
+    // =========================================================
+    // Show Normal
+    // =========================================================
+
+    public void ShowDirectionPanel()
+    {
+        /*
+         * 기존 코드 호환용.
+         *
+         * 일반 Show를 호출하면
+         * 버튼들을 모두 다시 보이게 한다.
+         */
+
+        ShowAllDirectionButtons();
+
+
+        if (directionPanel != null)
+        {
+            directionPanel.SetActive(true);
+        }
+    }
+
+
+    // =========================================================
+    // Hide
+    // =========================================================
+
+    public void HideDirectionPanel()
+    {
+        if (directionPanel != null)
+        {
+            directionPanel.SetActive(false);
+        }
+    }
+
+
+    // =========================================================
+    // Button Click
     // =========================================================
 
     public void OnClickMoveUp()
@@ -293,5 +296,131 @@ public class DungeonUIManager : MonoBehaviour
                     MoveDirection.Right
                 );
         }
+    }
+
+
+    // =========================================================
+    // Close Button
+    // =========================================================
+
+    public void OnClickCloseDirectionPanel()
+    {
+        ResolveReferences();
+
+
+        if (roomTraversalController != null)
+        {
+            roomTraversalController
+                .CloseDirectionPanel();
+        }
+        else
+        {
+            HideDirectionPanel();
+        }
+    }
+
+
+    // =========================================================
+    // Helpers
+    // =========================================================
+
+    private bool IsAvailable(
+        Dictionary<MoveDirection, bool> directions,
+        MoveDirection direction)
+    {
+        if (directions == null)
+        {
+            return false;
+        }
+
+
+        if (
+            !directions.TryGetValue(
+                direction,
+                out bool available
+            )
+        )
+        {
+            return false;
+        }
+
+
+        return available;
+    }
+
+
+    private void SetButtonInteractable(
+        Button button,
+        bool value)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+
+        button.interactable =
+            value;
+    }
+
+
+    private void SetButtonVisible(
+        Button button,
+        bool value)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+
+        button.gameObject.SetActive(
+            value
+        );
+
+
+        /*
+         * 표시된 버튼은 반드시 클릭 가능하게.
+         */
+        if (value)
+        {
+            button.interactable =
+                true;
+        }
+    }
+
+
+    private void ShowAllDirectionButtons()
+    {
+        ShowButton(
+            upButton
+        );
+
+        ShowButton(
+            downButton
+        );
+
+        ShowButton(
+            leftButton
+        );
+
+        ShowButton(
+            rightButton
+        );
+    }
+
+
+    private void ShowButton(
+        Button button)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+
+        button.gameObject.SetActive(
+            true
+        );
     }
 }

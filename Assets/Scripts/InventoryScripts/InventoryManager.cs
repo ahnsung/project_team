@@ -875,4 +875,64 @@ public class InventoryManager : MonoBehaviour
             grid = new InventoryItem[width, height];
         }
     }
+    // =========================================================
+    // Item ID Search / Consume
+    // =========================================================
+
+    public InventoryItem FindFirstItemById(int itemId)
+    {
+        if (items == null)
+            return null;
+
+        foreach (InventoryItem item in items)
+        {
+            if (item == null ||
+                item.data == null)
+            {
+                continue;
+            }
+
+            if (item.data.id == itemId)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+
+    public bool HasItemById(int itemId)
+    {
+        return FindFirstItemById(itemId) != null;
+    }
+
+
+    public bool ConsumeItemById(int itemId)
+    {
+        InventoryItem item =
+            FindFirstItemById(itemId);
+
+        if (item == null)
+        {
+            Debug.Log(
+                "[InventoryManager] 아이템을 찾지 못했습니다.\n" +
+                $"Item ID: {itemId}"
+            );
+
+            return false;
+        }
+
+
+        Debug.Log(
+            "[InventoryManager] 아이템 소비\n" +
+            $"Item ID: {itemId}\n" +
+            $"아이템: {item.data.itemName}"
+        );
+
+
+        RemoveItem(item);
+
+        return true;
+    }
 }

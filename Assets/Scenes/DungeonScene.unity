@@ -876,7 +876,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   directionPanel: {fileID: 1260835368}
   minimapRoot: {fileID: 1155155669}
-  inventoryRoot: {fileID: 713067694}
   upButton: {fileID: 1096609509}
   downButton: {fileID: 1008368381}
   leftButton: {fileID: 2125243372}
@@ -1467,12 +1466,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapWidth: 44
   mapHeight: 43
-  startRoom: {x: 6, y: 3}
+  startRoom: {x: 15, y: 29}
   currentTurn: 0
   currentEnvironment: "\uC9C0\uD558"
   uiManager: {fileID: 117336928}
   minimapUI: {fileID: 417786229}
-  mapDatabase: {fileID: 0}
+  mapDatabase: {fileID: 1790917462}
+  moveDataLoader: {fileID: 2099001465}
 --- !u!114 &268140401
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2179,6 +2179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dungeonManager: {fileID: 268140400}
   mapDatabase: {fileID: 1790917462}
+  moveDataLoader: {fileID: 2099001465}
   gridRoot: {fileID: 1155155670}
   cellPrefab: {fileID: 4797043658503498826, guid: 4bf5c0d8be21c624b91b240d60d9d7cb, type: 3}
   normalSprite: {fileID: -1785674201730124938, guid: c947e266836e75a43b75df3375e4584a, type: 3}
@@ -2191,6 +2192,14 @@ MonoBehaviour:
   puzzleLetterSprite: {fileID: 0}
   restSprite: {fileID: 0}
   bossSprite: {fileID: 0}
+  wallSprite: {fileID: -2593176476562498464, guid: 090b1c0c78bfa23489feadb7c3fbff0e, type: 3}
+  doorSprite: {fileID: 7038194530424758141, guid: 7a2de42efe1bb154091518d83d90e708, type: 3}
+  lockedDoorSprite: {fileID: 1788455484035983465, guid: 3d509c06177b0534fbfbb57d4429b7b6, type: 3}
+  oneWayDoorSprite: {fileID: 8853340551027978693, guid: d904d72a58261e44287dc3bbc7070102, type: 3}
+  wallThicknessRatio: 0.1
+  doorThicknessRatio: 0.18
+  doorLengthRatio: 0.55
+  pathOutwardOffsetRatio: 0.02
   currentBorderColor: {r: 0.23115504, g: 1, b: 0, a: 1}
   currentBorderThickness: 2
   viewSize: 9
@@ -5752,6 +5761,9 @@ Transform:
   - {fileID: 194461797}
   - {fileID: 1997517116}
   - {fileID: 2099001464}
+  - {fileID: 1302487735}
+  - {fileID: 1825268981}
+  - {fileID: 874037591}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &846517665
@@ -5981,6 +5993,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 860630154}
   m_CullTransparentMesh: 1
+--- !u!1 &874037590
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 874037591}
+  - component: {fileID: 874037592}
+  m_Layer: 0
+  m_Name: LockedDoorTestHelper
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &874037591
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 874037590}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &874037592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 874037590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7901d845ae5d5d740a02d98340b3e95f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &885968419
 GameObject:
   m_ObjectHideFlags: 0
@@ -11241,6 +11297,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1300253513}
   m_CullTransparentMesh: 1
+--- !u!1 &1302487734
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1302487735}
+  - component: {fileID: 1302487736}
+  m_Layer: 0
+  m_Name: DoorDataLoader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1302487735
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1302487734}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1302487736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1302487734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ec583eede7b5034ab0c2547cc0b26de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  doorDataCsv: {fileID: 4900000, guid: adc4a6643a36e614082354c724ef392f, type: 3}
 --- !u!1 &1302871163
 GameObject:
   m_ObjectHideFlags: 0
@@ -11397,6 +11498,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dungeonManager: {fileID: 268140400}
   battleManager: {fileID: 1052808771}
+  fadeController: {fileID: 2125530133}
   generalBattleStartChance: 10
   generalBattleIncreaseAmount: 10
 --- !u!1 &1350040349
@@ -12370,7 +12472,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d366cd75abded64478dae664ee3b2686, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  farmingDataCsv: {fileID: 4900000, guid: f8f904fd893b0ad4d8348472a2186291, type: 3}
+  farmingDataCsv: {fileID: 4900000, guid: 2ed3e21e0a8b57c42938f6b015e7a539, type: 3}
 --- !u!1 &1530029223
 GameObject:
   m_ObjectHideFlags: 0
@@ -14043,6 +14145,50 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trapDataFile: {fileID: 4900000, guid: 65d778a4274a65446bc98279ff35d45b, type: 3}
+--- !u!1 &1825268980
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1825268981}
+  - component: {fileID: 1825268982}
+  m_Layer: 0
+  m_Name: LockedDoorManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1825268981
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1825268980}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 818823549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1825268982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1825268980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21cf933880ab31d4c9a2b52da2c186b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1836735076
 GameObject:
   m_ObjectHideFlags: 0
@@ -15077,7 +15223,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a0a7a917f877774f82019184c2e07f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  teleportDataCsv: {fileID: 4900000, guid: 4ea17b37ab3e2084c84540ee50e6f9c4, type: 3}
+  teleportDataCsv: {fileID: 4900000, guid: e74e9e286dff37d4faf67a4d62804446, type: 3}
 --- !u!1 &1998374247
 GameObject:
   m_ObjectHideFlags: 0

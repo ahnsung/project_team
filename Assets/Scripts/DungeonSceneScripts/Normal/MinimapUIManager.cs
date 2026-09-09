@@ -10,11 +10,15 @@ public class MinimapUIManager : MonoBehaviour
     // =========================================================
 
     [Header("References")]
+
     [SerializeField]
     private DungeonManager dungeonManager;
 
     [SerializeField]
     private DungeonMapDatabase mapDatabase;
+
+    [SerializeField]
+    private MoveDataLoader moveDataLoader;
 
     [SerializeField]
     private RectTransform gridRoot;
@@ -61,6 +65,54 @@ public class MinimapUIManager : MonoBehaviour
 
 
     // =========================================================
+    // Path Sprites
+    // =========================================================
+
+    [Header("Path Sprites")]
+
+    [SerializeField]
+    private Sprite wallSprite;
+
+    [SerializeField]
+    private Sprite doorSprite;
+
+    [SerializeField]
+    private Sprite lockedDoorSprite;
+
+    [SerializeField]
+    private Sprite oneWayDoorSprite;
+
+
+    // =========================================================
+    // Path Size
+    // =========================================================
+
+    [Header("Path Size")]
+
+    [Tooltip("Wall 두께")]
+    [SerializeField]
+    [Range(0.05f, 0.50f)]
+    private float wallThicknessRatio = 0.22f;
+
+    [Tooltip("Door 폭")]
+    [SerializeField]
+    [Range(0.10f, 0.60f)]
+    private float doorThicknessRatio = 0.32f;
+
+    [Tooltip("Door 길이")]
+    [SerializeField]
+    [Range(0.30f, 1.20f)]
+    private float doorLengthRatio = 0.90f;
+
+    [Tooltip(
+        "Wall / Door를 타일 바깥쪽으로 얼마나 밀어낼지 결정합니다."
+    )]
+    [SerializeField]
+    [Range(0f, 0.30f)]
+    private float pathOutwardOffsetRatio = 0.08f;
+
+
+    // =========================================================
     // Current Position
     // =========================================================
 
@@ -70,8 +122,8 @@ public class MinimapUIManager : MonoBehaviour
     private Color currentBorderColor =
         new Color(
             0.15f,
-            0.45f,
             1f,
+            0.15f,
             1f
         );
 
@@ -92,12 +144,19 @@ public class MinimapUIManager : MonoBehaviour
 
 
     // =========================================================
-    // Cell
+    // Runtime Cell
     // =========================================================
 
     private class MinimapCell
     {
+        public RectTransform rootRect;
+
         public Image tileImage;
+
+        public Image upPathImage;
+        public Image rightPathImage;
+        public Image downPathImage;
+        public Image leftPathImage;
 
         public GameObject currentBorder;
     }
@@ -116,25 +175,13 @@ public class MinimapUIManager : MonoBehaviour
 
     private IEnumerator Start()
     {
-        if (dungeonManager == null)
-        {
-            dungeonManager =
-                DungeonManager.Instance;
-        }
-
-
-        if (mapDatabase == null)
-        {
-            mapDatabase =
-                DungeonMapDatabase.Instance;
-        }
+        ResolveReferences();
 
 
         if (dungeonManager == null)
         {
             Debug.LogError(
-                "[MinimapUIManager] " +
-                "DungeonManager를 찾을 수 없습니다."
+                "[MinimapUIManager] DungeonManager를 찾을 수 없습니다."
             );
 
             yield break;
@@ -144,8 +191,7 @@ public class MinimapUIManager : MonoBehaviour
         if (mapDatabase == null)
         {
             Debug.LogError(
-                "[MinimapUIManager] " +
-                "DungeonMapDatabase를 찾을 수 없습니다."
+                "[MinimapUIManager] DungeonMapDatabase를 찾을 수 없습니다."
             );
 
             yield break;
@@ -155,8 +201,7 @@ public class MinimapUIManager : MonoBehaviour
         if (gridRoot == null)
         {
             Debug.LogError(
-                "[MinimapUIManager] " +
-                "Grid Root가 연결되지 않았습니다."
+                "[MinimapUIManager] Grid Root가 연결되지 않았습니다."
             );
 
             yield break;
@@ -166,8 +211,7 @@ public class MinimapUIManager : MonoBehaviour
         if (cellPrefab == null)
         {
             Debug.LogError(
-                "[MinimapUIManager] " +
-                "Cell Prefab이 연결되지 않았습니다."
+                "[MinimapUIManager] Cell Prefab이 연결되지 않았습니다."
             );
 
             yield break;
@@ -181,17 +225,12 @@ public class MinimapUIManager : MonoBehaviour
         if (gridLayout == null)
         {
             Debug.LogError(
-                "[MinimapUIManager] " +
-                "GridRoot에 GridLayoutGroup이 없습니다."
+                "[MinimapUIManager] GridRoot에 GridLayoutGroup이 없습니다."
             );
 
             yield break;
         }
 
-
-        // -----------------------------------------------------
-        // 맵 데이터 로드 대기
-        // -----------------------------------------------------
 
         float timeout = 5f;
         float elapsed = 0f;
@@ -209,9 +248,7 @@ public class MinimapUIManager : MonoBehaviour
             if (elapsed >= timeout)
             {
                 Debug.LogError(
-                    "[MinimapUIManager] " +
-                    "맵 데이터 로드를 기다렸지만 " +
-                    "5초 안에 완료되지 않았습니다."
+                    "[MinimapUIManager] 맵 데이터 로드 대기 시간 초과"
                 );
 
                 yield break;
@@ -222,32 +259,71 @@ public class MinimapUIManager : MonoBehaviour
         }
 
 
-        // Canvas 계산까지 한 프레임 대기
-        yield return null;
-
-
         if (viewSize % 2 == 0)
         {
             viewSize++;
         }
 
 
+        yield return null;
+
+
         ConfigureGrid();
 
         BuildGrid();
+
+
+        Canvas.ForceUpdateCanvases();
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(
+            gridRoot
+        );
+
+        Canvas.ForceUpdateCanvases();
+
+
+        yield return null;
+
 
         RefreshMinimap();
 
 
         Debug.Log(
-            "[MinimapUIManager] " +
-            "초기 미니맵 표시 완료"
+            "[MinimapUIManager] 초기 미니맵 표시 완료"
         );
     }
 
 
     // =========================================================
-    // Grid 설정
+    // References
+    // =========================================================
+
+    private void ResolveReferences()
+    {
+        if (dungeonManager == null)
+        {
+            dungeonManager =
+                DungeonManager.Instance;
+        }
+
+
+        if (mapDatabase == null)
+        {
+            mapDatabase =
+                DungeonMapDatabase.Instance;
+        }
+
+
+        if (moveDataLoader == null)
+        {
+            moveDataLoader =
+                MoveDataLoader.Instance;
+        }
+    }
+
+
+    // =========================================================
+    // Grid
     // =========================================================
 
     private void ConfigureGrid()
@@ -300,8 +376,7 @@ public class MinimapUIManager : MonoBehaviour
 
 
         gridLayout.constraint =
-            GridLayoutGroup.Constraint
-                .FixedColumnCount;
+            GridLayoutGroup.Constraint.FixedColumnCount;
 
 
         gridLayout.constraintCount =
@@ -309,13 +384,11 @@ public class MinimapUIManager : MonoBehaviour
 
 
         gridLayout.startCorner =
-            GridLayoutGroup.Corner
-                .UpperLeft;
+            GridLayoutGroup.Corner.UpperLeft;
 
 
         gridLayout.startAxis =
-            GridLayoutGroup.Axis
-                .Horizontal;
+            GridLayoutGroup.Axis.Horizontal;
 
 
         gridLayout.childAlignment =
@@ -331,12 +404,11 @@ public class MinimapUIManager : MonoBehaviour
 
 
     // =========================================================
-    // Grid 생성
+    // Build Grid
     // =========================================================
 
     private void BuildGrid()
     {
-        // 기존 Cell 제거
         for (
             int i = gridRoot.childCount - 1;
             i >= 0;
@@ -344,9 +416,7 @@ public class MinimapUIManager : MonoBehaviour
         )
         {
             Destroy(
-                gridRoot
-                    .GetChild(i)
-                    .gameObject
+                gridRoot.GetChild(i).gameObject
             );
         }
 
@@ -372,15 +442,22 @@ public class MinimapUIManager : MonoBehaviour
                 );
 
 
+            RectTransform rootRect =
+                obj.GetComponent<RectTransform>();
+
+
             Image tileImage =
                 obj.GetComponent<Image>();
 
 
-            if (tileImage == null)
+            if (
+                rootRect == null ||
+                tileImage == null
+            )
             {
                 Debug.LogError(
                     "[MinimapUIManager] " +
-                    "CellPrefab에 Image가 없습니다."
+                    "CellPrefab에는 RectTransform과 Image가 필요합니다."
                 );
 
                 Destroy(obj);
@@ -389,12 +466,44 @@ public class MinimapUIManager : MonoBehaviour
             }
 
 
+            tileImage.enabled =
+                false;
+
+
             tileImage.preserveAspect =
                 true;
 
 
-            tileImage.enabled =
+            tileImage.raycastTarget =
                 false;
+
+
+            Image upPath =
+                CreatePathImage(
+                    obj.transform,
+                    "Path_Up"
+                );
+
+
+            Image rightPath =
+                CreatePathImage(
+                    obj.transform,
+                    "Path_Right"
+                );
+
+
+            Image downPath =
+                CreatePathImage(
+                    obj.transform,
+                    "Path_Down"
+                );
+
+
+            Image leftPath =
+                CreatePathImage(
+                    obj.transform,
+                    "Path_Left"
+                );
 
 
             GameObject border =
@@ -411,8 +520,23 @@ public class MinimapUIManager : MonoBehaviour
             MinimapCell cell =
                 new MinimapCell
                 {
+                    rootRect =
+                        rootRect,
+
                     tileImage =
                         tileImage,
+
+                    upPathImage =
+                        upPath,
+
+                    rightPathImage =
+                        rightPath,
+
+                    downPathImage =
+                        downPath,
+
+                    leftPathImage =
+                        leftPath,
 
                     currentBorder =
                         border
@@ -426,15 +550,94 @@ public class MinimapUIManager : MonoBehaviour
 
 
         Debug.Log(
-            "[MinimapUIManager] " +
-            "미니맵 Cell 생성 완료: " +
+            "[MinimapUIManager] 미니맵 Cell 생성 완료: " +
             cells.Count
         );
     }
 
 
     // =========================================================
-    // 현재 위치 Border
+    // Path Image
+    // =========================================================
+
+    private Image CreatePathImage(
+        Transform parent,
+        string objectName)
+    {
+        GameObject obj =
+            new GameObject(
+                objectName,
+                typeof(RectTransform),
+                typeof(Image)
+            );
+
+
+        obj.transform.SetParent(
+            parent,
+            false
+        );
+
+
+        RectTransform rect =
+            obj.GetComponent<RectTransform>();
+
+
+        rect.anchorMin =
+            new Vector2(
+                0.5f,
+                0.5f
+            );
+
+
+        rect.anchorMax =
+            new Vector2(
+                0.5f,
+                0.5f
+            );
+
+
+        rect.pivot =
+            new Vector2(
+                0.5f,
+                0.5f
+            );
+
+
+        rect.anchoredPosition =
+            Vector2.zero;
+
+
+        rect.sizeDelta =
+            Vector2.zero;
+
+
+        rect.localRotation =
+            Quaternion.identity;
+
+
+        Image image =
+            obj.GetComponent<Image>();
+
+
+        image.enabled =
+            false;
+
+
+        // 원본 Sprite 비율을 유지
+        image.preserveAspect =
+            true;
+
+
+        image.raycastTarget =
+            false;
+
+
+        return image;
+    }
+
+
+    // =========================================================
+    // Current Border
     // =========================================================
 
     private GameObject CreateCurrentBorder(
@@ -454,24 +657,25 @@ public class MinimapUIManager : MonoBehaviour
 
 
         RectTransform rootRect =
-            borderRoot.GetComponent<
-                RectTransform>();
+            borderRoot.GetComponent<RectTransform>();
 
 
         rootRect.anchorMin =
             Vector2.zero;
 
+
         rootRect.anchorMax =
             Vector2.one;
 
+
         rootRect.offsetMin =
             Vector2.zero;
+
 
         rootRect.offsetMax =
             Vector2.zero;
 
 
-        // 위
         CreateBorderLine(
             borderRoot.transform,
             "Top",
@@ -485,7 +689,6 @@ public class MinimapUIManager : MonoBehaviour
         );
 
 
-        // 아래
         CreateBorderLine(
             borderRoot.transform,
             "Bottom",
@@ -499,7 +702,6 @@ public class MinimapUIManager : MonoBehaviour
         );
 
 
-        // 왼쪽
         CreateBorderLine(
             borderRoot.transform,
             "Left",
@@ -513,7 +715,6 @@ public class MinimapUIManager : MonoBehaviour
         );
 
 
-        // 오른쪽
         CreateBorderLine(
             borderRoot.transform,
             "Right",
@@ -554,18 +755,20 @@ public class MinimapUIManager : MonoBehaviour
 
 
         RectTransform rect =
-            lineObject.GetComponent<
-                RectTransform>();
+            lineObject.GetComponent<RectTransform>();
 
 
         rect.anchorMin =
             anchorMin;
 
+
         rect.anchorMax =
             anchorMax;
 
+
         rect.offsetMin =
             offsetMin;
+
 
         rect.offsetMax =
             offsetMax;
@@ -590,22 +793,13 @@ public class MinimapUIManager : MonoBehaviour
 
     public void RefreshMinimap()
     {
-        if (dungeonManager == null)
-        {
-            dungeonManager =
-                DungeonManager.Instance;
-        }
+        ResolveReferences();
 
 
-        if (mapDatabase == null)
-        {
-            mapDatabase =
-                DungeonMapDatabase.Instance;
-        }
-
-
-        if (dungeonManager == null ||
-            mapDatabase == null)
+        if (
+            dungeonManager == null ||
+            mapDatabase == null
+        )
         {
             return;
         }
@@ -629,9 +823,10 @@ public class MinimapUIManager : MonoBehaviour
 
 
         /*
-         * 화면 위쪽이 높은 Y좌표가 되도록
-         * 위 → 아래 순서
+         * 화면 위   = North = Y - 1
+         * 화면 아래 = South = Y + 1
          */
+
         for (
             int row = 0;
             row < viewSize;
@@ -639,7 +834,7 @@ public class MinimapUIManager : MonoBehaviour
         )
         {
             int offsetY =
-                radius - row;
+                row - radius;
 
 
             for (
@@ -678,10 +873,6 @@ public class MinimapUIManager : MonoBehaviour
                     );
 
 
-                // ---------------------------------------------
-                // 타일 없음 / None
-                // ---------------------------------------------
-
                 if (
                     tile == null ||
                     tile.TileType ==
@@ -707,70 +898,54 @@ public class MinimapUIManager : MonoBehaviour
                     );
 
 
-                // ---------------------------------------------
-                // 현재 위치
-                // ---------------------------------------------
-
-                if (isCurrent)
+                if (
+                    !isCurrent &&
+                    !isVisited
+                )
                 {
-                    ShowVisitedTile(
-                        cell,
-                        tile.TileType
+                    HideCell(
+                        cell
                     );
-
-
-                    cell.currentBorder
-                        .SetActive(true);
-
 
                     continue;
                 }
 
 
-                // ---------------------------------------------
-                // 방문한 타일
-                // ---------------------------------------------
-
-                if (isVisited)
-                {
-                    ShowVisitedTile(
-                        cell,
-                        tile.TileType
-                    );
-
-
-                    cell.currentBorder
-                        .SetActive(false);
-
-
-                    continue;
-                }
-
-
-                // ---------------------------------------------
-                // 미방문 타일
-                //
-                // 기획상 아예 보이지 않는다.
-                // ---------------------------------------------
-
-                HideCell(
-                    cell
+                ShowTile(
+                    cell,
+                    tile.TileType
                 );
+
+
+                RefreshPathImages(
+                    cell,
+                    worldPosition
+                );
+
+
+                if (cell.currentBorder != null)
+                {
+                    cell.currentBorder.SetActive(
+                        isCurrent
+                    );
+                }
             }
         }
     }
 
 
     // =========================================================
-    // Cell 표시
+    // Tile
     // =========================================================
 
-    private void ShowVisitedTile(
+    private void ShowTile(
         MinimapCell cell,
         DungeonTileType tileType)
     {
-        if (cell == null ||
-            cell.tileImage == null)
+        if (
+            cell == null ||
+            cell.tileImage == null
+        )
         {
             return;
         }
@@ -799,34 +974,6 @@ public class MinimapUIManager : MonoBehaviour
             true;
     }
 
-
-    private void HideCell(
-        MinimapCell cell)
-    {
-        if (cell == null)
-        {
-            return;
-        }
-
-
-        if (cell.tileImage != null)
-        {
-            cell.tileImage.enabled =
-                false;
-        }
-
-
-        if (cell.currentBorder != null)
-        {
-            cell.currentBorder
-                .SetActive(false);
-        }
-    }
-
-
-    // =========================================================
-    // TileType -> Sprite
-    // =========================================================
 
     private Sprite GetTileSprite(
         DungeonTileType tileType)
@@ -870,32 +1017,755 @@ public class MinimapUIManager : MonoBehaviour
 
             case DungeonTileType.PuzzleLetter:
 
-                return puzzleLetterSprite;
+                return
+                    puzzleLetterSprite != null
+                        ? puzzleLetterSprite
+                        : normalSprite;
 
 
             case DungeonTileType.Rest:
 
-                if (restSprite != null)
-                {
-                    return restSprite;
-                }
-
-                return normalSprite;
+                return
+                    restSprite != null
+                        ? restSprite
+                        : normalSprite;
 
 
             case DungeonTileType.Boss:
 
-                if (bossSprite != null)
-                {
-                    return bossSprite;
-                }
-
-                return normalSprite;
+                return
+                    bossSprite != null
+                        ? bossSprite
+                        : normalSprite;
 
 
             default:
 
                 return normalSprite;
         }
+    }
+
+
+    // =========================================================
+    // Path Refresh
+    // =========================================================
+
+    private void RefreshPathImages(
+        MinimapCell cell,
+        Vector2Int position)
+    {
+        HideAllPathImages(
+            cell
+        );
+
+
+        if (
+            cell == null ||
+            cell.rootRect == null
+        )
+        {
+            return;
+        }
+
+
+        if (
+            moveDataLoader == null ||
+            !moveDataLoader.IsLoaded
+        )
+        {
+            return;
+        }
+
+
+        RefreshSinglePath(
+            cell,
+            cell.upPathImage,
+            position,
+            MoveDirection.Up
+        );
+
+
+        RefreshSinglePath(
+            cell,
+            cell.rightPathImage,
+            position,
+            MoveDirection.Right
+        );
+
+
+        RefreshSinglePath(
+            cell,
+            cell.downPathImage,
+            position,
+            MoveDirection.Down
+        );
+
+
+        RefreshSinglePath(
+            cell,
+            cell.leftPathImage,
+            position,
+            MoveDirection.Left
+        );
+    }
+
+
+    private void RefreshSinglePath(
+        MinimapCell cell,
+        Image image,
+        Vector2Int position,
+        MoveDirection direction)
+    {
+        if (
+            cell == null ||
+            image == null
+        )
+        {
+            return;
+        }
+
+
+        MoveData moveData =
+            moveDataLoader.GetMoveData(
+                position,
+                direction
+            );
+
+
+        if (moveData == null)
+        {
+            image.enabled =
+                false;
+
+            return;
+        }
+
+
+        Sprite sprite =
+            GetPathSprite(
+                moveData.PathType
+            );
+
+
+        /*
+         * 중요:
+         *
+         * Passable이 false여도
+         * OneWay / LockedDoor / Wall 등
+         * Path 자체는 표시한다.
+         */
+
+        if (sprite == null)
+        {
+            image.enabled =
+                false;
+
+            return;
+        }
+
+
+        image.sprite =
+            sprite;
+
+
+        LayoutPathImage(
+            cell,
+            image,
+            direction,
+            moveData.PathType
+        );
+
+
+        image.enabled =
+            true;
+    }
+
+
+    // =========================================================
+    // Path Layout
+    // =========================================================
+
+    private void LayoutPathImage(
+        MinimapCell cell,
+        Image image,
+        MoveDirection direction,
+        MovePathType pathType)
+    {
+        if (
+            cell == null ||
+            cell.rootRect == null ||
+            image == null
+        )
+        {
+            return;
+        }
+
+
+        float cellWidth =
+            cell.rootRect.rect.width;
+
+
+        float cellHeight =
+            cell.rootRect.rect.height;
+
+
+        if (cellWidth <= 0.01f)
+        {
+            cellWidth =
+                gridLayout.cellSize.x;
+        }
+
+
+        if (cellHeight <= 0.01f)
+        {
+            cellHeight =
+                gridLayout.cellSize.y;
+        }
+
+
+        RectTransform pathRect =
+            image.rectTransform;
+
+
+        if (
+            pathType ==
+            MovePathType.Wall
+        )
+        {
+            LayoutWall(
+                pathRect,
+                direction,
+                cellWidth,
+                cellHeight
+            );
+
+            return;
+        }
+
+
+        LayoutDoor(
+            pathRect,
+            direction,
+            cellWidth,
+            cellHeight
+        );
+    }
+
+
+    // =========================================================
+    // Wall
+    // =========================================================
+
+    private void LayoutWall(
+        RectTransform rect,
+        MoveDirection direction,
+        float cellWidth,
+        float cellHeight)
+    {
+        float shortSide =
+            Mathf.Min(
+                cellWidth,
+                cellHeight
+            );
+
+
+        float outwardOffset =
+            shortSide *
+            pathOutwardOffsetRatio;
+
+
+        float horizontalThickness =
+            Mathf.Max(
+                1f,
+                shortSide *
+                wallThicknessRatio
+            );
+
+
+        float verticalThickness =
+            horizontalThickness;
+
+
+        switch (direction)
+        {
+            case MoveDirection.Up:
+
+                rect.localRotation =
+                    Quaternion.identity;
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        cellWidth * 1.05f,
+                        horizontalThickness
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        0f,
+                        (cellHeight * 0.5f)
+                        +
+                        outwardOffset
+                    );
+
+                break;
+
+
+            case MoveDirection.Down:
+
+                rect.localRotation =
+                    Quaternion.identity;
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        cellWidth * 1.05f,
+                        horizontalThickness
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        0f,
+                        -(cellHeight * 0.5f)
+                        -
+                        outwardOffset
+                    );
+
+                break;
+
+
+            case MoveDirection.Left:
+
+                rect.localRotation =
+                    Quaternion.Euler(
+                        0f,
+                        0f,
+                        90f
+                    );
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        cellHeight * 1.05f,
+                        verticalThickness
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        -(cellWidth * 0.5f)
+                        -
+                        outwardOffset,
+                        0f
+                    );
+
+                break;
+
+
+            case MoveDirection.Right:
+
+                rect.localRotation =
+                    Quaternion.Euler(
+                        0f,
+                        0f,
+                        90f
+                    );
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        cellHeight * 1.05f,
+                        verticalThickness
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        (cellWidth * 0.5f)
+                        +
+                        outwardOffset,
+                        0f
+                    );
+
+                break;
+        }
+    }
+
+
+    // =========================================================
+    // Door
+    // =========================================================
+
+    private void LayoutDoor(
+        RectTransform rect,
+        MoveDirection direction,
+        float cellWidth,
+        float cellHeight)
+    {
+        float shortSide =
+            Mathf.Min(
+                cellWidth,
+                cellHeight
+            );
+
+
+        float outwardOffset =
+            shortSide *
+            pathOutwardOffsetRatio;
+
+
+        float thickness =
+            Mathf.Max(
+                1f,
+                shortSide *
+                doorThicknessRatio
+            );
+
+
+        float horizontalLength =
+            cellWidth *
+            doorLengthRatio;
+
+
+        float verticalLength =
+            cellHeight *
+            doorLengthRatio;
+
+
+        switch (direction)
+        {
+            // ---------------------------------------------
+            // North
+            // ---------------------------------------------
+
+            case MoveDirection.Up:
+
+                rect.localRotation =
+                    Quaternion.Euler(
+                        0f,
+                        0f,
+                        90f
+                    );
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        thickness,
+                        horizontalLength
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        0f,
+                        (cellHeight * 0.5f)
+                        +
+                        outwardOffset
+                    );
+
+                break;
+
+
+            // ---------------------------------------------
+            // South
+            // ---------------------------------------------
+
+            case MoveDirection.Down:
+
+                rect.localRotation =
+                    Quaternion.Euler(
+                        0f,
+                        0f,
+                        90f
+                    );
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        thickness,
+                        horizontalLength
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        0f,
+                        -(cellHeight * 0.5f)
+                        -
+                        outwardOffset
+                    );
+
+                break;
+
+
+            // ---------------------------------------------
+            // West
+            // ---------------------------------------------
+
+            case MoveDirection.Left:
+
+                rect.localRotation =
+                    Quaternion.identity;
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        thickness,
+                        verticalLength
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        -(cellWidth * 0.5f)
+                        -
+                        outwardOffset,
+                        0f
+                    );
+
+                break;
+
+
+            // ---------------------------------------------
+            // East
+            // ---------------------------------------------
+
+            case MoveDirection.Right:
+
+                rect.localRotation =
+                    Quaternion.identity;
+
+
+                rect.sizeDelta =
+                    new Vector2(
+                        thickness,
+                        verticalLength
+                    );
+
+
+                rect.anchoredPosition =
+                    new Vector2(
+                        (cellWidth * 0.5f)
+                        +
+                        outwardOffset,
+                        0f
+                    );
+
+                break;
+        }
+    }
+
+
+    // =========================================================
+    // Path Sprite
+    // =========================================================
+
+    private Sprite GetPathSprite(
+        MovePathType pathType)
+    {
+        switch (pathType)
+        {
+            case MovePathType.Open:
+
+                return null;
+
+
+            case MovePathType.Wall:
+
+                return wallSprite;
+
+
+            case MovePathType.Door:
+
+                return doorSprite;
+
+
+            case MovePathType.OneWay:
+
+                return oneWayDoorSprite;
+
+
+            case MovePathType.LockedDoor:
+
+                return lockedDoorSprite;
+
+
+            case MovePathType.GimmickDoor:
+
+                return doorSprite;
+
+
+            default:
+
+                return null;
+        }
+    }
+
+
+    // =========================================================
+    // Hide
+    // =========================================================
+
+    private void HideAllPathImages(
+        MinimapCell cell)
+    {
+        if (cell == null)
+        {
+            return;
+        }
+
+
+        SetImageEnabled(
+            cell.upPathImage,
+            false
+        );
+
+
+        SetImageEnabled(
+            cell.rightPathImage,
+            false
+        );
+
+
+        SetImageEnabled(
+            cell.downPathImage,
+            false
+        );
+
+
+        SetImageEnabled(
+            cell.leftPathImage,
+            false
+        );
+    }
+
+
+    private void HideCell(
+        MinimapCell cell)
+    {
+        if (cell == null)
+        {
+            return;
+        }
+
+
+        SetImageEnabled(
+            cell.tileImage,
+            false
+        );
+
+
+        HideAllPathImages(
+            cell
+        );
+
+
+        if (cell.currentBorder != null)
+        {
+            cell.currentBorder.SetActive(
+                false
+            );
+        }
+    }
+
+
+    private void SetImageEnabled(
+        Image image,
+        bool value)
+    {
+        if (image != null)
+        {
+            image.enabled =
+                value;
+        }
+    }
+
+
+    // =========================================================
+    // DEBUG
+    // =========================================================
+
+    [ContextMenu("DEBUG - Current Move Data")]
+    private void DebugCurrentMoveData()
+    {
+        ResolveReferences();
+
+
+        if (
+            dungeonManager == null ||
+            moveDataLoader == null
+        )
+        {
+            Debug.LogWarning(
+                "[MinimapUIManager] Debug에 필요한 참조가 없습니다."
+            );
+
+            return;
+        }
+
+
+        Vector2Int position =
+            dungeonManager.CurrentRoom;
+
+
+        Debug.Log(
+            "[MinimapUIManager] 현재 위치 Move Data 확인: " +
+            position
+        );
+
+
+        DebugDirection(
+            position,
+            MoveDirection.Up
+        );
+
+
+        DebugDirection(
+            position,
+            MoveDirection.Right
+        );
+
+
+        DebugDirection(
+            position,
+            MoveDirection.Down
+        );
+
+
+        DebugDirection(
+            position,
+            MoveDirection.Left
+        );
+    }
+
+
+    private void DebugDirection(
+        Vector2Int position,
+        MoveDirection direction)
+    {
+        MoveData data =
+            moveDataLoader.GetMoveData(
+                position,
+                direction
+            );
+
+
+        if (data == null)
+        {
+            Debug.Log(
+                $"{direction}: 데이터 없음"
+            );
+
+            return;
+        }
+
+
+        Debug.Log(
+            $"{direction}: " +
+            $"Type={data.PathType} / " +
+            $"Passable={data.Passable}"
+        );
     }
 }
