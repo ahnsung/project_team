@@ -110,6 +110,7 @@ public class BattleManager : MonoBehaviour
     {
         return battleRunning;
     }
+
     public bool CanPlayerUseItem()
     {
         return battleRunning &&
@@ -257,15 +258,33 @@ public class BattleManager : MonoBehaviour
                 enemyObject.GetComponent<BattleUnit>();
 
             if (unit == null)
-                unit = enemyObject.AddComponent<BattleUnit>();
+            {
+                unit =
+                    enemyObject.AddComponent<BattleUnit>();
+            }
 
-            unit.Setup(
-                data.monsterName,
-                data.maxHP,
-                data.attackPower,
-                data.accuracy,
-                data.evasion
-            );
+            // ==========================================
+            // 몬스터 데이터 연결
+            // ==========================================
+            //
+            // 기존:
+            //
+            // unit.Setup(
+            //     data.monsterName,
+            //     data.maxHP,
+            //     data.attackPower,
+            //     data.accuracy,
+            //     data.evasion
+            // );
+            //
+            // 변경:
+            //
+            // BattleUnit 내부에 BattleMonsterData까지 저장한다.
+            // 컷인 컨트롤러에서 Rat / Dog / 기타 몬스터의
+            // 공격/피격 이미지를 구분하기 위해 필요하다.
+            // ==========================================
+
+            unit.SetupMonster(data);
 
             StatusEffectController enemyStatusController =
                 enemyObject.GetComponent<StatusEffectController>();
@@ -375,20 +394,12 @@ public class BattleManager : MonoBehaviour
         if (!battleRunning)
             return;
 
-        /*
-         * 일반 플레이어 턴뿐 아니라
-         * 공격 대상 선택 중에도 방어로 행동 변경 가능.
-         */
         if (state != BattleState.PlayerTurn &&
             state != BattleState.SelectingTarget)
         {
             return;
         }
 
-        /*
-         * 공격 대상 선택 중이었다면
-         * 선택 상태를 취소한다.
-         */
         if (state == BattleState.SelectingTarget)
         {
             ClearEnemyArrows();
@@ -518,24 +529,16 @@ public class BattleManager : MonoBehaviour
     }
 
     private IEnumerator PlayerAttackRoutine(
-    BattleUnit target)
+        BattleUnit target)
     {
         state = BattleState.EnemyTurn;
 
         ClearEnemyArrows();
 
-        // ==========================================
-        // 플레이어 상태이상 Controller
-        // ==========================================
-
         StatusEffectController playerStatus =
             playerUnit != null
                 ? playerUnit.GetComponent<StatusEffectController>()
                 : null;
-
-        // ==========================================
-        // 명중률 계산
-        // ==========================================
 
         int playerAccuracy =
             PlayerStats.Instance != null
@@ -545,14 +548,12 @@ public class BattleManager : MonoBehaviour
                     ? playerUnit.accuracy
                     : 90;
 
-        // 상태이상 명중률 보정
         if (playerStatus != null)
         {
             playerAccuracy +=
                 playerStatus.GetAccuracyBonus();
         }
 
-        // 확률 안전 처리
         playerAccuracy =
             Mathf.Clamp(
                 playerAccuracy,
@@ -568,10 +569,6 @@ public class BattleManager : MonoBehaviour
             "[Battle] 플레이어 최종 명중률: " +
             playerAccuracy
         );
-
-        // ==========================================
-        // 공격 연출
-        // ==========================================
 
         if (cutInController != null &&
             playerUnit != null)
@@ -592,10 +589,6 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        // ==========================================
-        // 공격 적중
-        // ==========================================
-
         if (hit)
         {
             int baseDamage =
@@ -608,10 +601,6 @@ public class BattleManager : MonoBehaviour
                             playerUnit.attackPower
                         )
                         : 1;
-
-            // ======================================
-            // 공격력 상태이상
-            // ======================================
 
             float attackMultiplier = 1f;
 
@@ -630,10 +619,6 @@ public class BattleManager : MonoBehaviour
                         attackMultiplier
                     )
                 );
-
-            // ======================================
-            // 적이 받는 피해 상태이상
-            // ======================================
 
             StatusEffectController targetStatus =
                 target != null
@@ -680,10 +665,6 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        // ==========================================
-        // 무기 내구도
-        // ==========================================
-
         ConsumePlayerWeaponDurability();
 
         yield return new WaitForSeconds(
@@ -710,7 +691,7 @@ public class BattleManager : MonoBehaviour
     }
 
     private IEnumerator EnemyTurnRoutine(
-    bool addTurnAtEnd)
+        bool addTurnAtEnd)
     {
         state = BattleState.EnemyTurn;
 
@@ -731,10 +712,6 @@ public class BattleManager : MonoBehaviour
 
             StatusEffectController enemyStatusController =
                 GetOrAddStatusController(enemy);
-
-            // ==========================================
-            // 적 턴 시작 상태이상 처리
-            // ==========================================
 
             if (enemyStatusController != null)
             {
@@ -776,10 +753,6 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
-            // ==========================================
-            // 적 공격 연출
-            // ==========================================
-
             if (cutInController != null &&
                 playerUnit != null)
             {
@@ -798,10 +771,6 @@ public class BattleManager : MonoBehaviour
                 );
             }
 
-            // ==========================================
-            // 적 명중률 + 플레이어 회피 상태이상
-            // ==========================================
-
             int finalEnemyAccuracy =
                 enemy.accuracy;
 
@@ -810,14 +779,6 @@ public class BattleManager : MonoBehaviour
                 int evasionBonus =
                     playerStatusController
                         .GetEvasionBonus();
-
-                /*
-                 * 플레이어 EvasionUp
-                 * → 적 명중률 감소
-                 *
-                 * 플레이어 EvasionDown
-                 * → 적 명중률 증가
-                 */
 
                 finalEnemyAccuracy -=
                     evasionBonus;
@@ -840,10 +801,6 @@ public class BattleManager : MonoBehaviour
                     finalEnemyAccuracy
                 );
 
-            // ==========================================
-            // Guard 확인
-            // ==========================================
-
             bool guardWasActive =
                 playerStatusController != null &&
                 playerStatusController.HasStatusEffect(
@@ -853,25 +810,13 @@ public class BattleManager : MonoBehaviour
             bool applyGuardStunAfterTurn =
                 false;
 
-            // ==========================================
-            // 적중
-            // ==========================================
-
             if (hit)
             {
-                // --------------------------------------
-                // 적 기본 공격력
-                // --------------------------------------
-
                 int damage =
                     Mathf.Max(
                         1,
                         enemy.attackPower
                     );
-
-                // --------------------------------------
-                // 적 공격력 상태이상
-                // --------------------------------------
 
                 if (enemyStatusController != null)
                 {
@@ -898,10 +843,6 @@ public class BattleManager : MonoBehaviour
                     );
                 }
 
-                // --------------------------------------
-                // 배고픔 25% 이하 패널티
-                // --------------------------------------
-
                 if (PlayerResourceManager.Instance != null &&
                     PlayerResourceManager.Instance
                         .IsHungerAllDecreasePenaltyActive())
@@ -917,25 +858,11 @@ public class BattleManager : MonoBehaviour
                     );
                 }
 
-                // --------------------------------------
-                // 플레이어 방어력 상태이상
-                // --------------------------------------
-
                 if (playerStatusController != null)
                 {
                     float defenseMultiplier =
                         playerStatusController
                             .GetDefenseMultiplier();
-
-                    /*
-                     * DefenseUp
-                     * → 방어 배율 증가
-                     * → 받는 피해 감소
-                     *
-                     * DefenseDown
-                     * → 방어 배율 감소
-                     * → 받는 피해 증가
-                     */
 
                     if (defenseMultiplier > 0f)
                     {
@@ -955,10 +882,6 @@ public class BattleManager : MonoBehaviour
                         defenseMultiplier
                     );
                 }
-
-                // --------------------------------------
-                // 받는 피해량 상태이상
-                // --------------------------------------
 
                 if (playerStatusController != null)
                 {
@@ -981,10 +904,6 @@ public class BattleManager : MonoBehaviour
                         damageTakenMultiplier
                     );
                 }
-
-                // --------------------------------------
-                // Guard
-                // --------------------------------------
 
                 if (guardWasActive)
                 {
@@ -1016,10 +935,6 @@ public class BattleManager : MonoBehaviour
                     );
                 }
 
-                // --------------------------------------
-                // 최종 피해 적용
-                // --------------------------------------
-
                 if (playerUnit != null)
                 {
                     playerUnit.TakeDamage(
@@ -1046,20 +961,12 @@ public class BattleManager : MonoBehaviour
                     );
                 }
 
-                // --------------------------------------
-                // 방어구 내구도
-                // --------------------------------------
-
                 ConsumePlayerArmorDurability(
                     guardWasActive
                 );
             }
             else
             {
-                // ======================================
-                // MISS
-                // ======================================
-
                 if (playerUnit != null)
                 {
                     ShowFloatingText(
@@ -1073,20 +980,12 @@ public class BattleManager : MonoBehaviour
                 afterHitDelay
             );
 
-            // ==========================================
-            // 적 턴 종료
-            // ==========================================
-
             if (enemyStatusController != null)
             {
                 enemyStatusController.ProcessTiming(
                     StatusEffectTiming.SelfTurnEnd
                 );
             }
-
-            // ==========================================
-            // Guard 반격 기절
-            // ==========================================
 
             if (applyGuardStunAfterTurn &&
                 enemyStatusController != null)
@@ -1096,10 +995,6 @@ public class BattleManager : MonoBehaviour
                 );
             }
 
-            // ==========================================
-            // 플레이어 사망
-            // ==========================================
-
             if (playerUnit != null &&
                 playerUnit.IsDead)
             {
@@ -1107,10 +1002,6 @@ public class BattleManager : MonoBehaviour
                 yield break;
             }
         }
-
-        // ==========================================
-        // 적 팀 종료 상태이상
-        // ==========================================
 
         RemoveDeadEnemies();
 
@@ -1136,11 +1027,6 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // ==========================================
-        // 전체 턴 종료
-        // ==========================================
-
-
         RemoveDeadEnemies();
 
         if (playerUnit != null &&
@@ -1149,10 +1035,6 @@ public class BattleManager : MonoBehaviour
             EndBattle();
             yield break;
         }
-
-        // ==========================================
-        // 전투 승리
-        // ==========================================
 
         if (AllEnemiesDead())
         {
@@ -1168,10 +1050,6 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        // ==========================================
-        // 던전 턴 증가
-        // ==========================================
-
         if (addTurnAtEnd &&
             DungeonManager.Instance != null)
         {
@@ -1183,9 +1061,6 @@ public class BattleManager : MonoBehaviour
 
         ReturnToPlayerTurnIfPossible();
     }
-
-
-    
 
     private void ConsumePlayerWeaponDurability()
     {
@@ -1226,17 +1101,13 @@ public class BattleManager : MonoBehaviour
     }
 
     private void ConsumePlayerArmorDurability(
-    bool guardActive)
+        bool guardActive)
     {
         if (EquipmentManager.Instance == null)
             return;
 
         int finalCost =
             armorDurabilityCost;
-
-        // =========================================
-        // Guard
-        // =========================================
 
         if (guardActive)
         {
@@ -1246,10 +1117,6 @@ public class BattleManager : MonoBehaviour
                     guardArmorDurabilityMultiplier
                 );
         }
-
-        // =========================================
-        // 부식
-        // =========================================
 
         StatusEffectController controller =
             GetPlayerStatusController();

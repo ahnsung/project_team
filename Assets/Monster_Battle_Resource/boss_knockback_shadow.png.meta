@@ -103,12 +103,12 @@ TextureImporter:
       name: boss_knockback_shadow_0
       rect:
         serializedVersion: 2
-        x: 111
-        y: 66
-        width: 664
-        height: 1113
+        x: 0
+        y: 0
+        width: 851
+        height: 1299
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -125,7 +125,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 3262699d5b6c13b46966dc11cd9d173f
     internalID: 0
     vertices: []
     indices: 

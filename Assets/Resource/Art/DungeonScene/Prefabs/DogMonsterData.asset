@@ -18,3 +18,11 @@ MonoBehaviour:
   attackPower: 10
   accuracy: 70
   evasion: 0
+  attackCutInSprite: {fileID: 0}
+  attackShadowSprite: {fileID: 0}
+  hitCutInSprite: {fileID: 0}
+  hitShadowSprite: {fileID: 0}
+  flipCutInX: 0
+  attackCutInScale: 1
+  hitCutInScale: 1
+  attackSound: {fileID: 0}
