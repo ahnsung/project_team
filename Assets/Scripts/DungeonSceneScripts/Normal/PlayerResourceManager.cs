@@ -226,6 +226,22 @@ public class PlayerResourceManager : MonoBehaviour
                 );
         }
 
+        if (amount > 0)
+        {
+            StatusEffectController controller =
+                GetPlayerStatusController();
+
+            if (controller != null)
+            {
+                finalAmount =
+                    Mathf.RoundToInt(
+                        finalAmount *
+                        controller
+                            .GetHealthHealingMultiplier()
+                    );
+            }
+        }
+
         int before =
             currentHealth;
 
@@ -268,6 +284,21 @@ public class PlayerResourceManager : MonoBehaviour
                     amount * 0.5f
                 );
         }
+        if (amount > 0)
+        {
+            StatusEffectController controller =
+                GetPlayerStatusController();
+
+            if (controller != null)
+            {
+                finalAmount =
+                    Mathf.RoundToInt(
+                        finalAmount *
+                        controller
+                            .GetMentalHealingMultiplier()
+                    );
+            }
+        }
 
         int before =
             currentMental;
@@ -301,6 +332,22 @@ public class PlayerResourceManager : MonoBehaviour
                 -ApplyDecreasePenalty(
                     Mathf.Abs(amount)
                 );
+        }
+
+        if (amount > 0)
+        {
+            StatusEffectController controller =
+                GetPlayerStatusController();
+
+            if (controller != null)
+            {
+                finalAmount =
+                    Mathf.RoundToInt(
+                        finalAmount *
+                        controller
+                            .GetHungerHealingMultiplier()
+                    );
+            }
         }
 
         int before =
@@ -541,5 +588,24 @@ public class PlayerResourceManager : MonoBehaviour
                 LAST_PROCESSED_TURN_KEY,
                 0
             );
+    }
+    private StatusEffectController
+    GetPlayerStatusController()
+    {
+        if (
+            BattleManager.Instance != null &&
+            BattleManager.Instance.playerUnit != null)
+        {
+            StatusEffectController controller =
+                BattleManager.Instance.playerUnit
+                    .GetComponent<StatusEffectController>();
+
+            if (controller != null)
+            {
+                return controller;
+            }
+        }
+
+        return null;
     }
 }

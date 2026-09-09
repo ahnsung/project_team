@@ -365,6 +365,30 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
+        StatusEffectController playerStatus =
+    null;
+
+        if (
+            BattleManager.Instance != null &&
+            BattleManager.Instance.playerUnit != null)
+        {
+            playerStatus =
+                BattleManager.Instance.playerUnit
+                    .GetComponent<StatusEffectController>();
+        }
+
+        if (
+            playerStatus != null &&
+            !playerStatus.CanUseItem())
+        {
+            Debug.Log(
+                "[InventoryManager] 혼란 상태이므로 " +
+                "아이템을 사용할 수 없습니다."
+            );
+
+            return;
+        }
+
         if (BattleManager.Instance != null &&
             BattleManager.Instance
                 .IsBattleRunning() &&

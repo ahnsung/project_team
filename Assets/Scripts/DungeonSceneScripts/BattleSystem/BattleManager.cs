@@ -1140,7 +1140,6 @@ public class BattleManager : MonoBehaviour
         // 전체 턴 종료
         // ==========================================
 
-        ProcessBattleTurnEndStatusEffects();
 
         RemoveDeadEnemies();
 
@@ -1186,56 +1185,58 @@ public class BattleManager : MonoBehaviour
     }
 
 
-    private void ProcessBattleTurnEndStatusEffects()
-    {
-        StatusEffectController playerStatusController =
-            GetPlayerStatusController();
-
-        if (playerStatusController != null)
-        {
-            playerStatusController.ProcessTiming(
-                StatusEffectTiming.TurnEnd
-            );
-        }
-
-        BattleUnit[] snapshot = enemies.ToArray();
-
-        foreach (BattleUnit enemy in snapshot)
-        {
-            if (enemy == null)
-                continue;
-
-            StatusEffectController controller =
-                GetStatusController(enemy);
-
-            if (controller != null)
-            {
-                controller.ProcessTiming(
-                    StatusEffectTiming.TurnEnd
-                );
-            }
-        }
-    }
+    
 
     private void ConsumePlayerWeaponDurability()
     {
         if (EquipmentManager.Instance == null)
             return;
 
+        int finalCost =
+            weaponDurabilityCost;
+
+        StatusEffectController controller =
+            GetPlayerStatusController();
+
+        if (controller != null)
+        {
+            finalCost =
+                Mathf.RoundToInt(
+                    finalCost *
+                    controller
+                        .GetDurabilityCostMultiplier()
+                );
+        }
+
+        finalCost =
+            Mathf.Max(
+                0,
+                finalCost
+            );
+
         EquipmentManager.Instance
             .ConsumeMainWeaponDurability(
-                weaponDurabilityCost
+                finalCost
             );
+
+        Debug.Log(
+            "[BattleManager] 무기 내구도 소모: " +
+            finalCost
+        );
     }
 
     private void ConsumePlayerArmorDurability(
-        bool guardActive)
+    bool guardActive)
     {
         if (EquipmentManager.Instance == null)
             return;
 
         int finalCost =
             armorDurabilityCost;
+
+        // =========================================
+        // Guard
+        // =========================================
 
         if (guardActive)
         {
@@ -1246,10 +1247,40 @@ public class BattleManager : MonoBehaviour
                 );
         }
 
+        // =========================================
+        // 부식
+        // =========================================
+
+        StatusEffectController controller =
+            GetPlayerStatusController();
+
+        if (controller != null)
+        {
+            finalCost =
+                Mathf.RoundToInt(
+                    finalCost *
+                    controller
+                        .GetDurabilityCostMultiplier()
+                );
+        }
+
+        finalCost =
+            Mathf.Max(
+                0,
+                finalCost
+            );
+
         EquipmentManager.Instance
             .ConsumeArmorDurability(
                 finalCost
             );
+
+        Debug.Log(
+            "[BattleManager] 방어구 내구도 소모: " +
+            finalCost +
+            " / Guard: " +
+            guardActive
+        );
     }
 
     private StatusEffectController GetPlayerStatusController()

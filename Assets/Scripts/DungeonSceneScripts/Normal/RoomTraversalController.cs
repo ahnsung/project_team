@@ -28,18 +28,15 @@ public class RoomTraversalController : MonoBehaviour
     private FadeController fadeController;
 
     [SerializeField]
-    private DungeonTileEventManager
-        tileEventManager;
+    private DungeonTileEventManager tileEventManager;
 
     [SerializeField]
-    private CameraRoomTransition
-        cameraRoomTransition;
+    private CameraRoomTransition cameraRoomTransition;
 
 
     private RoomState state;
 
     private bool isTransitioning;
-
     private bool isInteracting;
 
 
@@ -73,6 +70,38 @@ public class RoomTraversalController : MonoBehaviour
 
     private void Update()
     {
+        // =====================================================
+        // ★ 전투 중 던전 이동/상호작용 완전 차단
+        // =====================================================
+
+        if (IsBattleRunning())
+        {
+            /*
+             * 전투가 시작되기 전에
+             * 방향 선택창이 열려 있었다면 닫아준다.
+             */
+            if (
+                state ==
+                RoomState.DirectionChoosing
+            )
+            {
+                if (uiManager != null)
+                {
+                    uiManager.HideDirectionPanel();
+                }
+
+                state =
+                    RoomState.WaitingForInput;
+            }
+
+            return;
+        }
+
+
+        // =====================================================
+        // 일반 입력 가능 상태 확인
+        // =====================================================
+
         if (
             state !=
             RoomState.WaitingForInput
@@ -197,6 +226,24 @@ public class RoomTraversalController : MonoBehaviour
 
 
     // =========================================================
+    // Battle Check
+    // =========================================================
+
+    private bool IsBattleRunning()
+    {
+        if (BattleManager.Instance == null)
+        {
+            return false;
+        }
+
+
+        return
+            BattleManager.Instance
+                .IsBattleRunning();
+    }
+
+
+    // =========================================================
     // References
     // =========================================================
 
@@ -287,6 +334,14 @@ public class RoomTraversalController : MonoBehaviour
         }
 
 
+        /*
+         * ExecuteEnterEvent 안에서
+         * 전투가 시작됐더라도
+         * WaitingForInput으로 상태는 돌려놓는다.
+         *
+         * 실제 입력 차단은 Update의
+         * IsBattleRunning()에서 담당한다.
+         */
         state =
             RoomState.WaitingForInput;
     }
@@ -298,6 +353,18 @@ public class RoomTraversalController : MonoBehaviour
 
     private void TryInteract()
     {
+        // ★ 전투 중 E 상호작용 차단
+        if (IsBattleRunning())
+        {
+            Debug.Log(
+                "[RoomTraversalController] " +
+                "전투 중에는 상호작용할 수 없습니다."
+            );
+
+            return;
+        }
+
+
         if (
             isInteracting ||
             isTransitioning
@@ -310,9 +377,9 @@ public class RoomTraversalController : MonoBehaviour
         ResolveReferences();
 
 
-        // =========================================================
+        // =====================================================
         // Base Camp Exit
-        // =========================================================
+        // =====================================================
 
         if (
             BaseCampExitManager.Instance != null &&
@@ -332,9 +399,9 @@ public class RoomTraversalController : MonoBehaviour
         }
 
 
-        // =========================================================
+        // =====================================================
         // Normal Tile Interaction
-        // =========================================================
+        // =====================================================
 
         if (tileEventManager == null)
         {
@@ -394,6 +461,18 @@ public class RoomTraversalController : MonoBehaviour
     private void TryOpenMove(
         MoveDirection direction)
     {
+        // ★ 전투 중 Open 이동 차단
+        if (IsBattleRunning())
+        {
+            Debug.Log(
+                "[RoomTraversalController] " +
+                "전투 중에는 방을 이동할 수 없습니다."
+            );
+
+            return;
+        }
+
+
         ResolveReferences();
 
 
@@ -477,6 +556,18 @@ public class RoomTraversalController : MonoBehaviour
 
     private void OpenDirectionPanel()
     {
+        // ★ 전투 중 특수통로 UI 차단
+        if (IsBattleRunning())
+        {
+            Debug.Log(
+                "[RoomTraversalController] " +
+                "전투 중에는 특수 통로를 사용할 수 없습니다."
+            );
+
+            return;
+        }
+
+
         if (
             isTransitioning ||
             isInteracting
@@ -567,6 +658,28 @@ public class RoomTraversalController : MonoBehaviour
     public void SelectNextRoom(
         MoveDirection direction)
     {
+        // ★ 전투 중 UI 버튼으로 이동하는 것도 차단
+        if (IsBattleRunning())
+        {
+            if (uiManager != null)
+            {
+                uiManager.HideDirectionPanel();
+            }
+
+
+            state =
+                RoomState.WaitingForInput;
+
+
+            Debug.Log(
+                "[RoomTraversalController] " +
+                "전투 중에는 특수 통로를 사용할 수 없습니다."
+            );
+
+            return;
+        }
+
+
         if (
             state !=
             RoomState.DirectionChoosing
@@ -722,6 +835,23 @@ public class RoomTraversalController : MonoBehaviour
         MoveDirection direction,
         bool specialMove)
     {
+        /*
+         * ★ 실제 방 변경 직전에도 한 번 더 검사.
+         *
+         * 입력을 받은 직후 전투가 시작되는 등의
+         * 타이밍 문제까지 방지한다.
+         */
+        if (IsBattleRunning())
+        {
+            Debug.Log(
+                "[RoomTraversalController] " +
+                "전투가 진행 중이므로 방 이동을 취소합니다."
+            );
+
+            yield break;
+        }
+
+
         isTransitioning =
             true;
 
@@ -737,7 +867,10 @@ public class RoomTraversalController : MonoBehaviour
         }
 
 
+        // =====================================================
         // Camera movement
+        // =====================================================
+
         if (
             cameraRoomTransition != null
         )
@@ -750,12 +883,69 @@ public class RoomTraversalController : MonoBehaviour
         }
 
 
+        /*
+         * 카메라 연출 도중 전투가 시작되는
+         * 특수 상황도 방어.
+         */
+        if (IsBattleRunning())
+        {
+            if (cameraRoomTransition != null)
+            {
+                cameraRoomTransition
+                    .ResetCameraPosition();
+            }
+
+
+            isTransitioning =
+                false;
+
+            state =
+                RoomState.WaitingForInput;
+
+            yield break;
+        }
+
+
+        // =====================================================
         // Fade Out
+        // =====================================================
+
         if (fadeController != null)
         {
             yield return
                 fadeController
                     .FadeOut();
+        }
+
+
+        /*
+         * DungeonManager.MoveToNextRoom 호출 직전
+         * 마지막으로 전투 상태 확인.
+         */
+        if (IsBattleRunning())
+        {
+            if (fadeController != null)
+            {
+                yield return
+                    fadeController
+                        .FadeIn();
+            }
+
+
+            if (cameraRoomTransition != null)
+            {
+                cameraRoomTransition
+                    .ResetCameraPosition();
+            }
+
+
+            isTransitioning =
+                false;
+
+            state =
+                RoomState.WaitingForInput;
+
+            yield break;
         }
 
 
@@ -789,7 +979,10 @@ public class RoomTraversalController : MonoBehaviour
         }
 
 
+        // =====================================================
         // Fade In
+        // =====================================================
+
         if (fadeController != null)
         {
             yield return
@@ -816,8 +1009,8 @@ public class RoomTraversalController : MonoBehaviour
             "이동 방식: " +
             (
                 specialMove
-                ? "특수 통로"
-                : "Open"
+                    ? "특수 통로"
+                    : "Open"
             ) +
             "\n현재 위치: " +
             dungeonManager.CurrentRoom

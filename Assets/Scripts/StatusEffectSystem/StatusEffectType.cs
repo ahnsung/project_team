@@ -2,17 +2,11 @@ public enum StatusEffectType
 {
     None = 0,
 
-    // 현재 구현된 상태이상
     Stun = 1,
     Poison = 2,
     StatIncrease = 3,
 
-    // 방어 상태
     Guard = 9,
-
-    // =============================
-    // 전투 능력치 버프 / 디버프
-    // =============================
 
     AttackPowerUp = 10,
     AttackPowerDown = 11,
@@ -26,17 +20,11 @@ public enum StatusEffectType
     EvasionUp = 16,
     EvasionDown = 17,
 
-    // 받는 피해량 자체를 조정
     DamageTakenUp = 18,
     DamageTakenDown = 19,
 
-    // 회복량 보정
     HealingUp = 20,
     HealingDown = 21,
-
-    // =============================
-    // 기본 스탯
-    // =============================
 
     StrengthUp = 30,
     StrengthDown = 31,
@@ -48,5 +36,29 @@ public enum StatusEffectType
     ConstitutionDown = 35,
 
     IntelligenceUp = 36,
-    IntelligenceDown = 37
+    IntelligenceDown = 37,
+
+    // 부상
+    HealthHealingDown = 40,
+
+    // 피로
+    HungerHealingDown = 41,
+
+    // 좌절
+    MentalHealingDown = 42,
+
+    // 침묵
+    Silence = 43,
+
+    // 혼란
+    Confusion = 44,
+
+    // 부식
+    Corrosion = 45,
+
+    // General 전투 발생률
+    BattleEncounterRateUp = 46,
+
+    // 아이템 획득량/확률
+    ItemAcquisitionUp = 47
 }

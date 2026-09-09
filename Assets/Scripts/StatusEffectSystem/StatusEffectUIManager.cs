@@ -4,92 +4,93 @@ using UnityEngine;
 
 public class StatusEffectUIManager : MonoBehaviour
 {
+    // =========================================================
+    // Target
+    // =========================================================
+
     [Header("Target")]
     [SerializeField]
     private StatusEffectController targetController;
 
-    [Header("Icon")]
+
+    // =========================================================
+    // Icon UI
+    // =========================================================
+
+    [Header("Icon UI")]
     [SerializeField]
     private Transform iconContainer;
 
     [SerializeField]
     private GameObject iconPrefab;
 
-    [Header("Basic Status Icons")]
+
+    // =========================================================
+    // Common Icons
+    // =========================================================
+
+    [Header("Common Icons")]
+
+    [Tooltip("일반적인 긍정 버프에 사용")]
+    [SerializeField]
+    private Sprite buffUpIcon;
+
+    [Tooltip("일반적인 부정 디버프에 사용")]
+    [SerializeField]
+    private Sprite buffDownIcon;
+
+
+    // =========================================================
+    // Special Icons
+    // =========================================================
+
+    [Header("Special Status Icons")]
+
+    [SerializeField]
+    private Sprite guardIcon;
+
     [SerializeField]
     private Sprite poisonIcon;
 
     [SerializeField]
     private Sprite stunIcon;
 
-    [Header("Attack Icons")]
     [SerializeField]
-    private Sprite attackPowerUpIcon;
+    private Sprite corrosionIcon;
+
+
+    // =========================================================
+    // Hunger
+    // =========================================================
+
+    [Header("Hunger Icons")]
 
     [SerializeField]
-    private Sprite attackPowerDownIcon;
-
-    [Header("Defense Icons")]
-    [SerializeField]
-    private Sprite defenseUpIcon;
+    private Sprite hungerIcon;
 
     [SerializeField]
-    private Sprite defenseDownIcon;
+    private Sprite hungerDownIcon;
 
-    [Header("Accuracy Icons")]
-    [SerializeField]
-    private Sprite accuracyUpIcon;
 
-    [SerializeField]
-    private Sprite accuracyDownIcon;
+    // =========================================================
+    // Frustration / Mental
+    // =========================================================
 
-    [Header("Evasion Icons")]
-    [SerializeField]
-    private Sprite evasionUpIcon;
+    [Header("Frustration Icons")]
 
     [SerializeField]
-    private Sprite evasionDownIcon;
-
-    [Header("Damage Taken Icons")]
-    [SerializeField]
-    private Sprite damageTakenUpIcon;
+    private Sprite frustrationIcon;
 
     [SerializeField]
-    private Sprite damageTakenDownIcon;
+    private Sprite frustrationDownIcon;
 
-    [Header("Healing Icons")]
-    [SerializeField]
-    private Sprite healingUpIcon;
 
-    [SerializeField]
-    private Sprite healingDownIcon;
-
-    [Header("Stat Icons")]
-    [SerializeField]
-    private Sprite strengthUpIcon;
-
-    [SerializeField]
-    private Sprite strengthDownIcon;
-
-    [SerializeField]
-    private Sprite dexterityUpIcon;
-
-    [SerializeField]
-    private Sprite dexterityDownIcon;
-
-    [SerializeField]
-    private Sprite constitutionUpIcon;
-
-    [SerializeField]
-    private Sprite constitutionDownIcon;
-
-    [SerializeField]
-    private Sprite intelligenceUpIcon;
-
-    [SerializeField]
-    private Sprite intelligenceDownIcon;
+    // =========================================================
+    // Tooltip
+    // =========================================================
 
     [Header("Tooltip")]
+
     [SerializeField]
     private GameObject tooltipRoot;
 
@@ -102,8 +103,18 @@ public class StatusEffectUIManager : MonoBehaviour
     [SerializeField]
     private TextMeshProUGUI tooltipDurationText;
 
+
+    // =========================================================
+    // Runtime
+    // =========================================================
+
     private readonly List<StatusEffectIconUI> iconUIs =
         new List<StatusEffectIconUI>();
+
+
+    // =========================================================
+    // Unity
+    // =========================================================
 
     private void Start()
     {
@@ -123,6 +134,7 @@ public class StatusEffectUIManager : MonoBehaviour
         RefreshUI();
     }
 
+
     private void OnDestroy()
     {
         if (targetController != null)
@@ -131,6 +143,11 @@ public class StatusEffectUIManager : MonoBehaviour
                 RefreshUI;
         }
     }
+
+
+    // =========================================================
+    // Target
+    // =========================================================
 
     private void ResolveTarget()
     {
@@ -142,9 +159,7 @@ public class StatusEffectUIManager : MonoBehaviour
                 FindObjectsSortMode.None
             );
 
-        foreach (
-            StatusEffectController controller
-            in controllers)
+        foreach (StatusEffectController controller in controllers)
         {
             if (controller == null)
                 continue;
@@ -152,23 +167,36 @@ public class StatusEffectUIManager : MonoBehaviour
             BattleUnit unit =
                 controller.GetComponent<BattleUnit>();
 
-            if (BattleManager.Instance != null &&
+            if (
+                BattleManager.Instance != null &&
                 BattleManager.Instance.playerUnit != null &&
-                unit == BattleManager.Instance.playerUnit)
+                unit == BattleManager.Instance.playerUnit
+            )
             {
                 targetController = controller;
                 return;
             }
         }
+
+        Debug.LogWarning(
+            "[StatusEffectUIManager] 플레이어 StatusEffectController를 찾지 못했습니다."
+        );
     }
+
+
+    // =========================================================
+    // Refresh
+    // =========================================================
 
     public void RefreshUI()
     {
         ClearIcons();
 
-        if (targetController == null ||
+        if (
+            targetController == null ||
             iconContainer == null ||
-            iconPrefab == null)
+            iconPrefab == null
+        )
         {
             return;
         }
@@ -177,18 +205,10 @@ public class StatusEffectUIManager : MonoBehaviour
             ActiveStatusEffect effect
             in targetController.ActiveEffects)
         {
-            if (effect == null ||
-                effect.Data == null)
-            {
-                continue;
-            }
-
-            /*
-             * Guard는 전투 행동으로 사용되는 일시 상태이므로
-             * 플레이어 상태이상 아이콘 목록에는 표시하지 않는다.
-             */
-            if (effect.Data.effectType ==
-                StatusEffectType.Guard)
+            if (
+                effect == null ||
+                effect.Data == null
+            )
             {
                 continue;
             }
@@ -196,18 +216,12 @@ public class StatusEffectUIManager : MonoBehaviour
             Sprite sprite =
                 GetIcon(effect);
 
-            /*
-             * 아이콘이 없는 데이터는
-             * DurationText만 덩그러니 생성하지 않는다.
-             */
             if (sprite == null)
             {
                 Debug.LogWarning(
-                    "[StatusEffectUIManager] 아이콘이 없어 " +
-                    "UI 표시를 건너뜁니다: " +
-                    effect.Data.buffName +
-                    " / " +
-                    effect.Data.effectType
+                    "[StatusEffectUIManager] 아이콘을 찾지 못했습니다.\n" +
+                    $"이름: {effect.Data.buffName}\n" +
+                    $"Type: {effect.Data.effectType}"
                 );
 
                 continue;
@@ -248,96 +262,158 @@ public class StatusEffectUIManager : MonoBehaviour
         }
     }
 
+
+    // =========================================================
+    // Icon Select
+    // =========================================================
+
     private Sprite GetIcon(
         ActiveStatusEffect effect)
     {
-        if (effect == null ||
-            effect.Data == null)
+        if (
+            effect == null ||
+            effect.Data == null
+        )
         {
             return null;
         }
 
-        /*
-         * 나중에 기획 데이터에서 직접 아이콘을 지정하면
-         * Inspector 매핑보다 그 아이콘을 우선 사용한다.
-         */
-        if (effect.Data.icon != null)
+        StatusEffectData data =
+            effect.Data;
+
+
+        // =====================================================
+        // 1순위
+        // 데이터 자체 아이콘
+        // =====================================================
+
+        if (data.icon != null)
         {
-            return effect.Data.icon;
+            return data.icon;
         }
 
-        switch (
-            effect.Data.effectType)
+
+        // =====================================================
+        // 2순위
+        // 특수 상태
+        // =====================================================
+
+        switch (data.effectType)
         {
+            case StatusEffectType.Guard:
+
+                return guardIcon;
+
+
             case StatusEffectType.Poison:
+
                 return poisonIcon;
 
+
             case StatusEffectType.Stun:
+
                 return stunIcon;
-
-            case StatusEffectType.AttackPowerUp:
-                return attackPowerUpIcon;
-
-            case StatusEffectType.AttackPowerDown:
-                return attackPowerDownIcon;
-
-            case StatusEffectType.DefenseUp:
-                return defenseUpIcon;
-
-            case StatusEffectType.DefenseDown:
-                return defenseDownIcon;
-
-            case StatusEffectType.AccuracyUp:
-                return accuracyUpIcon;
-
-            case StatusEffectType.AccuracyDown:
-                return accuracyDownIcon;
-
-            case StatusEffectType.EvasionUp:
-                return evasionUpIcon;
-
-            case StatusEffectType.EvasionDown:
-                return evasionDownIcon;
-
-            case StatusEffectType.DamageTakenUp:
-                return damageTakenUpIcon;
-
-            case StatusEffectType.DamageTakenDown:
-                return damageTakenDownIcon;
-
-            case StatusEffectType.HealingUp:
-                return healingUpIcon;
-
-            case StatusEffectType.HealingDown:
-                return healingDownIcon;
-
-            case StatusEffectType.StrengthUp:
-                return strengthUpIcon;
-
-            case StatusEffectType.StrengthDown:
-                return strengthDownIcon;
-
-            case StatusEffectType.DexterityUp:
-                return dexterityUpIcon;
-
-            case StatusEffectType.DexterityDown:
-                return dexterityDownIcon;
-
-            case StatusEffectType.ConstitutionUp:
-                return constitutionUpIcon;
-
-            case StatusEffectType.ConstitutionDown:
-                return constitutionDownIcon;
-
-            case StatusEffectType.IntelligenceUp:
-                return intelligenceUpIcon;
-
-            case StatusEffectType.IntelligenceDown:
-                return intelligenceDownIcon;
         }
+
+
+        // =====================================================
+        // 3순위
+        // 이름 기준 특수 상태
+        //
+        // 아직 별도 StatusEffectType이 없는 상태까지 대응
+        // =====================================================
+
+        string buffName =
+            data.buffName ?? string.Empty;
+
+
+        // -----------------------------------------------------
+        // 부식
+        // -----------------------------------------------------
+
+        if (
+            buffName.Contains("부식")
+        )
+        {
+            return corrosionIcon;
+        }
+
+
+        // -----------------------------------------------------
+        // Hunger
+        // -----------------------------------------------------
+
+        if (
+            buffName.Contains("배고픔")
+        )
+        {
+            /*
+             * 이름에 감소 / 악화 등이 포함되어 있으면
+             * Hunger Down 사용
+             */
+
+            if (
+                buffName.Contains("감소") ||
+                buffName.Contains("악화") ||
+                buffName.Contains("25") ||
+                buffName.Contains("50")
+            )
+            {
+                return hungerDownIcon;
+            }
+
+            return hungerIcon;
+        }
+
+
+        // -----------------------------------------------------
+        // Frustration / Mental
+        // -----------------------------------------------------
+
+        if (
+            buffName.Contains("좌절") ||
+            buffName.Contains("정신력")
+        )
+        {
+            if (
+                buffName.Contains("감소") ||
+                buffName.Contains("악화") ||
+                buffName.Contains("25") ||
+                buffName.Contains("50")
+            )
+            {
+                return frustrationDownIcon;
+            }
+
+            return frustrationIcon;
+        }
+
+
+        // =====================================================
+        // 4순위
+        // 일반 Positive / Negative
+        // =====================================================
+
+        switch (data.tendency)
+        {
+            case StatusEffectTendency.Positive:
+
+                return buffUpIcon;
+
+
+            case StatusEffectTendency.Negative:
+
+                return buffDownIcon;
+        }
+
 
         return null;
     }
+
+
+    // =========================================================
+    // Clear
+    // =========================================================
 
     private void ClearIcons()
     {
@@ -356,11 +432,18 @@ public class StatusEffectUIManager : MonoBehaviour
         iconUIs.Clear();
     }
 
+
+    // =========================================================
+    // Tooltip
+    // =========================================================
+
     public void ShowTooltip(
         ActiveStatusEffect effect)
     {
-        if (effect == null ||
-            effect.Data == null)
+        if (
+            effect == null ||
+            effect.Data == null
+        )
         {
             return;
         }
@@ -391,6 +474,7 @@ public class StatusEffectUIManager : MonoBehaviour
                       effect.RemainingDuration;
         }
     }
+
 
     public void HideTooltip()
     {

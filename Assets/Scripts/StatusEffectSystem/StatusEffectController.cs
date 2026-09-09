@@ -14,6 +14,11 @@ public class StatusEffectController : MonoBehaviour
     public IReadOnlyList<ActiveStatusEffect> ActiveEffects
         => activeEffects;
 
+
+    // =========================================================
+    // Unity
+    // =========================================================
+
     private void Awake()
     {
         if (activeEffects == null)
@@ -25,6 +30,7 @@ public class StatusEffectController : MonoBehaviour
         RemoveInvalidEffects();
     }
 
+
     // =========================================================
     // 상태이상 추가
     // =========================================================
@@ -35,8 +41,8 @@ public class StatusEffectController : MonoBehaviour
         if (data == null)
         {
             Debug.LogWarning(
-                "[StatusEffectController] 추가하려는 " +
-                "StatusEffectData가 null입니다."
+                "[StatusEffectController] " +
+                "추가하려는 StatusEffectData가 null입니다."
             );
 
             return false;
@@ -46,8 +52,8 @@ public class StatusEffectController : MonoBehaviour
             StatusEffectType.None)
         {
             Debug.LogWarning(
-                "[StatusEffectController] EffectType이 None인 " +
-                "상태이상은 추가하지 않습니다."
+                "[StatusEffectController] " +
+                "EffectType이 None인 상태이상은 추가하지 않습니다."
             );
 
             return false;
@@ -56,22 +62,42 @@ public class StatusEffectController : MonoBehaviour
         ActiveStatusEffect sameEffect =
             FindSameEffect(data);
 
-        /*
-         * canStack == true
-         * 같은 ID의 상태이상이 이미 있으면 지속시간을 합산한다.
-         */
-        if (sameEffect != null &&
-            data.canStack)
+
+        // =====================================================
+        // 중첩 가능
+        //
+        // 같은 ID라도 각각 독립적인 인스턴스로 존재한다.
+        //
+        // 예:
+        // DEX 감소 2턴
+        // DEX 감소 5턴
+        //
+        // 두 효과가 각각 따로 감소한다.
+        // =====================================================
+
+        if (data.canStack)
         {
-            sameEffect.AddStack(
-                data.buffDuration
+            ActiveStatusEffect stackedEffect =
+                new ActiveStatusEffect(data);
+
+            activeEffects.Add(
+                stackedEffect
             );
 
             Debug.Log(
-                "[StatusEffectController] 상태이상 중첩: " +
+                "[StatusEffectController] " +
+                "중첩 상태이상 추가: " +
                 data.buffName +
-                " / 남은 지속시간: " +
-                sameEffect.RemainingDuration
+                " / 지속시간: " +
+                (
+                    stackedEffect.IsInfinite
+                        ? "무한"
+                        : stackedEffect
+                            .RemainingDuration
+                            .ToString()
+                ) +
+                " / 동일 ID 개수: " +
+                GetSameEffectCount(data.id)
             );
 
             NotifyChanged();
@@ -79,10 +105,55 @@ public class StatusEffectController : MonoBehaviour
             return true;
         }
 
-        ActiveStatusEffect newEffect =
-            new ActiveStatusEffect(
-                data
+
+        // =====================================================
+        // 중첩 불가능
+        //
+        // 하나만 유지하고 더 긴 지속시간으로 갱신
+        // =====================================================
+
+        if (sameEffect != null)
+        {
+            if (!sameEffect.IsInfinite &&
+                data.buffDuration > 0)
+            {
+                int refreshedDuration =
+                    Mathf.Max(
+                        sameEffect.RemainingDuration,
+                        data.buffDuration
+                    );
+
+                sameEffect.SetRemainingDuration(
+                    refreshedDuration
+                );
+            }
+
+            Debug.Log(
+                "[StatusEffectController] " +
+                "중첩 불가 상태이상 갱신: " +
+                data.buffName +
+                " / 남은 지속시간: " +
+                (
+                    sameEffect.IsInfinite
+                        ? "무한"
+                        : sameEffect
+                            .RemainingDuration
+                            .ToString()
+                )
             );
+
+            NotifyChanged();
+
+            return true;
+        }
+
+
+        // =====================================================
+        // 최초 추가
+        // =====================================================
+
+        ActiveStatusEffect newEffect =
+            new ActiveStatusEffect(data);
 
         activeEffects.Add(
             newEffect
@@ -95,7 +166,9 @@ public class StatusEffectController : MonoBehaviour
             (
                 newEffect.IsInfinite
                     ? "무한"
-                    : newEffect.RemainingDuration.ToString()
+                    : newEffect
+                        .RemainingDuration
+                        .ToString()
             )
         );
 
@@ -103,6 +176,7 @@ public class StatusEffectController : MonoBehaviour
 
         return true;
     }
+
 
     // =========================================================
     // 상태이상 조회
@@ -114,6 +188,7 @@ public class StatusEffectController : MonoBehaviour
         return GetStatusEffect(type) != null;
     }
 
+
     public ActiveStatusEffect GetStatusEffect(
         StatusEffectType type)
     {
@@ -121,11 +196,8 @@ public class StatusEffectController : MonoBehaviour
             ActiveStatusEffect effect
             in activeEffects)
         {
-            if (effect == null ||
-                effect.Data == null)
-            {
+            if (!IsValidEffect(effect))
                 continue;
-            }
 
             if (effect.Data.effectType ==
                 type)
@@ -136,6 +208,7 @@ public class StatusEffectController : MonoBehaviour
 
         return null;
     }
+
 
     public List<ActiveStatusEffect>
         GetStatusEffects(
@@ -148,11 +221,8 @@ public class StatusEffectController : MonoBehaviour
             ActiveStatusEffect effect
             in activeEffects)
         {
-            if (effect == null ||
-                effect.Data == null)
-            {
+            if (!IsValidEffect(effect))
                 continue;
-            }
 
             if (effect.Data.effectType ==
                 type)
@@ -166,6 +236,7 @@ public class StatusEffectController : MonoBehaviour
         return result;
     }
 
+
     public bool HasStatusEffectById(
         int id)
     {
@@ -173,11 +244,8 @@ public class StatusEffectController : MonoBehaviour
             ActiveStatusEffect effect
             in activeEffects)
         {
-            if (effect == null ||
-                effect.Data == null)
-            {
+            if (!IsValidEffect(effect))
                 continue;
-            }
 
             if (effect.Data.id == id)
             {
@@ -188,8 +256,9 @@ public class StatusEffectController : MonoBehaviour
         return false;
     }
 
+
     // =========================================================
-    // 전투 수치 보정 API
+    // 공격력
     // =========================================================
 
     public float GetAttackPowerMultiplier()
@@ -216,6 +285,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.AttackPowerDown:
 
                     multiplier -=
@@ -230,6 +300,11 @@ public class StatusEffectController : MonoBehaviour
             multiplier
         );
     }
+
+
+    // =========================================================
+    // 방어력
+    // =========================================================
 
     public float GetDefenseMultiplier()
     {
@@ -255,6 +330,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.DefenseDown:
 
                     multiplier -=
@@ -269,6 +345,11 @@ public class StatusEffectController : MonoBehaviour
             multiplier
         );
     }
+
+
+    // =========================================================
+    // 명중
+    // =========================================================
 
     public int GetAccuracyBonus()
     {
@@ -291,6 +372,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.AccuracyDown:
 
                     result -=
@@ -302,6 +384,11 @@ public class StatusEffectController : MonoBehaviour
 
         return result;
     }
+
+
+    // =========================================================
+    // 회피
+    // =========================================================
 
     public int GetEvasionBonus()
     {
@@ -324,6 +411,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.EvasionDown:
 
                     result -=
@@ -335,6 +423,11 @@ public class StatusEffectController : MonoBehaviour
 
         return result;
     }
+
+
+    // =========================================================
+    // 받는 피해
+    // =========================================================
 
     public float GetDamageTakenMultiplier()
     {
@@ -360,6 +453,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.DamageTakenDown:
 
                     multiplier -=
@@ -370,12 +464,9 @@ public class StatusEffectController : MonoBehaviour
         }
 
         /*
-         * 기존 Guard는 별도 타입이지만,
-         * 받는 피해 보정 API에서도 같이 반영 가능하게 한다.
-         * 현재 BattleManager에서 Guard를 직접 50% 처리하고 있으므로
-         * BattleManager를 수정하기 전까지는 중복 적용하면 안 된다.
-         *
-         * 따라서 Guard는 여기서는 적용하지 않는다.
+         * Guard는 BattleManager에서 별도로 처리 중.
+         * 여기서 Guard까지 적용하면 피해 감소가
+         * 두 번 들어가므로 적용하지 않는다.
          */
 
         return Mathf.Max(
@@ -383,6 +474,11 @@ public class StatusEffectController : MonoBehaviour
             multiplier
         );
     }
+
+
+    // =========================================================
+    // 범용 회복량
+    // =========================================================
 
     public float GetHealingMultiplier()
     {
@@ -408,6 +504,7 @@ public class StatusEffectController : MonoBehaviour
 
                     break;
 
+
                 case StatusEffectType.HealingDown:
 
                     multiplier -=
@@ -423,6 +520,191 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
+    // =========================================================
+    // 체력 회복량
+    // 부상
+    // =========================================================
+
+    public float GetHealthHealingMultiplier()
+    {
+        float multiplier =
+            GetHealingMultiplier();
+
+        foreach (
+            ActiveStatusEffect effect
+            in activeEffects)
+        {
+            if (!IsValidEffect(effect))
+                continue;
+
+            if (
+                effect.Data.effectType ==
+                StatusEffectType.HealthHealingDown)
+            {
+                multiplier -=
+                    effect.Data.effectPower /
+                    100f;
+            }
+        }
+
+        return Mathf.Max(
+            0f,
+            multiplier
+        );
+    }
+
+
+    // =========================================================
+    // 배고픔 회복량
+    // 피로
+    // =========================================================
+
+    public float GetHungerHealingMultiplier()
+    {
+        float multiplier =
+            GetHealingMultiplier();
+
+        foreach (
+            ActiveStatusEffect effect
+            in activeEffects)
+        {
+            if (!IsValidEffect(effect))
+                continue;
+
+            if (
+                effect.Data.effectType ==
+                StatusEffectType.HungerHealingDown)
+            {
+                multiplier -=
+                    effect.Data.effectPower /
+                    100f;
+            }
+        }
+
+        return Mathf.Max(
+            0f,
+            multiplier
+        );
+    }
+
+
+    // =========================================================
+    // 정신력 회복량
+    // 좌절
+    // =========================================================
+
+    public float GetMentalHealingMultiplier()
+    {
+        float multiplier =
+            GetHealingMultiplier();
+
+        foreach (
+            ActiveStatusEffect effect
+            in activeEffects)
+        {
+            if (!IsValidEffect(effect))
+                continue;
+
+            if (
+                effect.Data.effectType ==
+                StatusEffectType.MentalHealingDown)
+            {
+                multiplier -=
+                    effect.Data.effectPower /
+                    100f;
+            }
+        }
+
+        return Mathf.Max(
+            0f,
+            multiplier
+        );
+    }
+
+
+    // =========================================================
+    // 행동 가능 여부
+    // =========================================================
+
+    public bool CanAct()
+    {
+        return !HasStatusEffect(
+            StatusEffectType.Stun
+        );
+    }
+
+
+    public bool CanAttack()
+    {
+        return CanAct();
+    }
+
+
+    // =========================================================
+    // 침묵
+    // =========================================================
+
+    public bool CanUseSkill()
+    {
+        return
+            CanAct() &&
+            !HasStatusEffect(
+                StatusEffectType.Silence
+            );
+    }
+
+
+    // =========================================================
+    // 혼란
+    // =========================================================
+
+    public bool CanUseItem()
+    {
+        return
+            CanAct() &&
+            !HasStatusEffect(
+                StatusEffectType.Confusion
+            );
+    }
+
+
+    // =========================================================
+    // 부식
+    // =========================================================
+
+    public float GetDurabilityCostMultiplier()
+    {
+        float multiplier = 1f;
+
+        foreach (
+            ActiveStatusEffect effect
+            in activeEffects)
+        {
+            if (!IsValidEffect(effect))
+                continue;
+
+            if (
+                effect.Data.effectType ==
+                StatusEffectType.Corrosion)
+            {
+                multiplier +=
+                    effect.Data.effectPower /
+                    100f;
+            }
+        }
+
+        return Mathf.Max(
+            0f,
+            multiplier
+        );
+    }
+
+
+    // =========================================================
+    // STR / DEX / CON / INT
+    // =========================================================
+
     public int GetStrengthBonus()
     {
         return GetStatBonus(
@@ -430,6 +712,7 @@ public class StatusEffectController : MonoBehaviour
             StatusEffectType.StrengthDown
         );
     }
+
 
     public int GetDexterityBonus()
     {
@@ -439,6 +722,7 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
     public int GetConstitutionBonus()
     {
         return GetStatBonus(
@@ -447,6 +731,7 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
     public int GetIntelligenceBonus()
     {
         return GetStatBonus(
@@ -454,6 +739,7 @@ public class StatusEffectController : MonoBehaviour
             StatusEffectType.IntelligenceDown
         );
     }
+
 
     private int GetStatBonus(
         StatusEffectType upType,
@@ -468,9 +754,14 @@ public class StatusEffectController : MonoBehaviour
             if (!IsValidEffect(effect))
                 continue;
 
-            if (effect.Data.effectType ==
+            if (
+                effect.Data.effectType ==
                 upType)
             {
+                /*
+                 * 증가 데이터:
+                 * +1 같은 양수값
+                 */
                 result +=
                     effect.Data.effectPower;
             }
@@ -478,7 +769,13 @@ public class StatusEffectController : MonoBehaviour
                 effect.Data.effectType ==
                 downType)
             {
-                result -=
+                /*
+                 * 감소 데이터:
+                 * 이미 -1 같은 음수값.
+                 *
+                 * 따라서 다시 빼면 안 된다.
+                 */
+                result +=
                     effect.Data.effectPower;
             }
         }
@@ -486,20 +783,9 @@ public class StatusEffectController : MonoBehaviour
         return result;
     }
 
-    public bool CanAct()
-    {
-        return !HasStatusEffect(
-            StatusEffectType.Stun
-        );
-    }
-
-    public bool CanAttack()
-    {
-        return CanAct();
-    }
 
     // =========================================================
-    // 특정 전투 타이밍 처리
+    // 특정 타이밍 처리
     // =========================================================
 
     public void ProcessTiming(
@@ -526,12 +812,13 @@ public class StatusEffectController : MonoBehaviour
                 continue;
             }
 
-            /*
-             * 기획서 규칙:
-             * 효과 발동과 지속시간 감소가 같은 타이밍이면
-             * 효과 발동을 먼저 처리한다.
-             */
-            if (effect.Data.whenBuffEffect ==
+
+            // =================================================
+            // 효과 발동
+            // =================================================
+
+            if (
+                effect.Data.whenBuffEffect ==
                 timing)
             {
                 TriggerStatusEffect(
@@ -540,8 +827,9 @@ public class StatusEffectController : MonoBehaviour
                 );
             }
 
+
             /*
-             * 효과 발동으로 이미 제거됐을 수 있다.
+             * 효과 발동으로 제거되었을 수 있음.
              */
             if (!activeEffects.Contains(
                     effect))
@@ -549,7 +837,13 @@ public class StatusEffectController : MonoBehaviour
                 continue;
             }
 
-            if (effect.Data.whenDecreaseDuration ==
+
+            // =================================================
+            // 지속시간 감소
+            // =================================================
+
+            if (
+                effect.Data.whenDecreaseDuration ==
                 timing)
             {
                 DecreaseDuration(
@@ -563,6 +857,7 @@ public class StatusEffectController : MonoBehaviour
 
         NotifyChanged();
     }
+
 
     // =========================================================
     // 상태이상 효과 발동
@@ -581,12 +876,21 @@ public class StatusEffectController : MonoBehaviour
         StatusEffectData data =
             effect.Data;
 
-        switch (data.effectType)
+        switch (
+            data.effectType)
         {
+            // =================================================
+            // 즉발형
+            // =================================================
+
             case StatusEffectType.Stun:
 
-                // 실제 행동 차단은 BattleManager에서 처리.
+                /*
+                 * 실제 행동 차단은
+                 * CanAct() / BattleManager 쪽에서 처리.
+                 */
                 break;
+
 
             case StatusEffectType.Poison:
 
@@ -596,53 +900,82 @@ public class StatusEffectController : MonoBehaviour
 
                 break;
 
+
+            // =================================================
+            // 기존 호환용
+            // =================================================
+
             case StatusEffectType.StatIncrease:
 
-                /*
-                 * 기존 테스트용 타입.
-                 * 앞으로 세부 스탯 타입
-                 * StrengthUp / DexterityUp 등을 사용한다.
-                 */
                 break;
+
 
             case StatusEffectType.Guard:
 
                 /*
-                 * 현재 Guard는 BattleManager에서
-                 * 피해 50%, 방어구 내구도 2배를 처리.
+                 * Guard 피해 감소와
+                 * 내구도 처리는 BattleManager 담당.
                  */
                 break;
+
+
+            // =================================================
+            // 패시브 조회형
+            //
+            // 여기서 즉시 뭔가 하지 않고
+            // 전투/자원 계산 시 GetXXX()로 조회한다.
+            // =================================================
 
             case StatusEffectType.AttackPowerUp:
             case StatusEffectType.AttackPowerDown:
+
             case StatusEffectType.DefenseUp:
             case StatusEffectType.DefenseDown:
+
             case StatusEffectType.AccuracyUp:
             case StatusEffectType.AccuracyDown:
+
             case StatusEffectType.EvasionUp:
             case StatusEffectType.EvasionDown:
+
             case StatusEffectType.DamageTakenUp:
             case StatusEffectType.DamageTakenDown:
+
             case StatusEffectType.HealingUp:
             case StatusEffectType.HealingDown:
+
             case StatusEffectType.StrengthUp:
             case StatusEffectType.StrengthDown:
+
             case StatusEffectType.DexterityUp:
             case StatusEffectType.DexterityDown:
+
             case StatusEffectType.ConstitutionUp:
             case StatusEffectType.ConstitutionDown:
+
             case StatusEffectType.IntelligenceUp:
             case StatusEffectType.IntelligenceDown:
 
-                /*
-                 * 이 타입들은 ProcessTiming에서 별도의 즉발 효과를
-                 * 발동하는 것이 아니라,
-                 * 지속 중 전투 계산 시 GetXXX() API로 조회한다.
-                 */
+            case StatusEffectType.HealthHealingDown:
+            case StatusEffectType.HungerHealingDown:
+            case StatusEffectType.MentalHealingDown:
+
+            case StatusEffectType.Silence:
+            case StatusEffectType.Confusion:
+            case StatusEffectType.Corrosion:
+
+            case StatusEffectType.BattleEncounterRateUp:
+            case StatusEffectType.ItemAcquisitionUp:
                 break;
         }
 
-        if (data.whenRemove ==
+
+        // =====================================================
+        // 효과 발동 후 제거
+        // =====================================================
+
+        if (
+            data.whenRemove ==
             StatusEffectRemoveType.EffectTriggered)
         {
             RemoveStatusEffect(
@@ -651,34 +984,82 @@ public class StatusEffectController : MonoBehaviour
         }
     }
 
+
     // =========================================================
     // 중독
+    //
+    // effectPower = 최대 체력 대비 %
+    //
+    // 예:
+    // 최대 HP 100 / power 10
+    // -> 10 피해
+    //
+    // 최대 HP 150 / power 10
+    // -> 15 피해
     // =========================================================
 
     private void ApplyPoisonDamage(
-        int amount)
+        int percent)
     {
-        int damage =
+        percent =
             Mathf.Max(
                 0,
-                amount
+                percent
             );
 
-        if (damage <= 0)
+        if (percent <= 0)
             return;
+
 
         BattleUnit unit =
             GetComponent<BattleUnit>();
 
         bool isPlayer =
-            BattleManager.Instance != null &&
-            BattleManager.Instance.playerUnit != null &&
-            unit ==
-            BattleManager.Instance.playerUnit;
+            IsPlayerController(
+                unit
+            );
+
+
+        // =====================================================
+        // 플레이어
+        // =====================================================
 
         if (isPlayer)
         {
-            if (unit != null &&
+            int maxHealth = 1;
+
+            if (
+                PlayerResourceManager.Instance !=
+                null)
+            {
+                maxHealth =
+                    Mathf.Max(
+                        1,
+                        PlayerResourceManager.Instance
+                            .MaxHealth
+                    );
+            }
+
+
+            int damage =
+                Mathf.Max(
+                    1,
+                    Mathf.CeilToInt(
+                        maxHealth *
+                        (percent / 100f)
+                    )
+                );
+
+
+            /*
+             * BattleUnit의 전투 HP와
+             * PlayerResourceManager의 던전 자원을
+             * 기존 BattleManager와 동일하게
+             * 함께 갱신한다.
+             */
+
+            if (
+                unit != null &&
                 !unit.IsDead)
             {
                 unit.TakeDamage(
@@ -686,7 +1067,10 @@ public class StatusEffectController : MonoBehaviour
                 );
             }
 
-            if (PlayerResourceManager.Instance != null)
+
+            if (
+                PlayerResourceManager.Instance !=
+                null)
             {
                 PlayerResourceManager.Instance
                     .ChangeHealth(
@@ -695,38 +1079,111 @@ public class StatusEffectController : MonoBehaviour
                     );
             }
 
+
             Debug.Log(
-                "[StatusEffectController] 플레이어 중독 피해: " +
-                damage
+                "[StatusEffectController] " +
+                "플레이어 중독 피해: " +
+                damage +
+                " / 최대 체력: " +
+                maxHealth +
+                " / 비율: " +
+                percent +
+                "%"
             );
 
             return;
         }
 
-        if (unit != null &&
+
+        // =====================================================
+        // 적
+        //
+        // 현재 BattleUnit에서 최대 HP를
+        // StatusEffectController가 안전하게 가져오는
+        // 공개 API가 확인되지 않았기 때문에,
+        // 적에게 사용되는 경우에는 기존 수치 피해 방식 유지.
+        //
+        // 현재 함정 중독은 플레이어에게 적용되므로
+        // 플레이어 함정 기능에는 영향 없음.
+        // =====================================================
+
+        int enemyDamage =
+            Mathf.Max(
+                1,
+                percent
+            );
+
+
+        if (
+            unit != null &&
             !unit.IsDead)
         {
             unit.TakeDamage(
-                damage
+                enemyDamage
             );
 
             Debug.Log(
                 "[StatusEffectController] " +
                 unit.unitName +
                 " 중독 피해: " +
-                damage
+                enemyDamage
             );
         }
     }
 
+
     // =========================================================
-    // 지속시간
+    // 플레이어 판정
+    // =========================================================
+
+    private bool IsPlayerController(
+        BattleUnit unit)
+    {
+        /*
+         * 가장 확실한 판정:
+         * BattleManager의 playerUnit
+         */
+
+        if (
+            BattleManager.Instance != null &&
+            BattleManager.Instance.playerUnit != null &&
+            unit ==
+            BattleManager.Instance.playerUnit)
+        {
+            return true;
+        }
+
+
+        /*
+         * 비전투 상태에서도 PlayerStats가 같은
+         * GameObject에 붙어 있으면 플레이어로 판단.
+         */
+
+        PlayerStats stats =
+            GetComponent<PlayerStats>();
+
+        if (
+            stats != null &&
+            PlayerStats.Instance ==
+            stats)
+        {
+            return true;
+        }
+
+
+        return false;
+    }
+
+
+    // =========================================================
+    // 지속시간 감소
     // =========================================================
 
     private void DecreaseDuration(
         ActiveStatusEffect effect)
     {
-        if (effect == null ||
+        if (
+            effect == null ||
             effect.Data == null ||
             effect.IsInfinite)
         {
@@ -748,8 +1205,9 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
     // =========================================================
-    // 제거
+    // 개별 제거
     // =========================================================
 
     public bool RemoveStatusEffect(
@@ -779,6 +1237,11 @@ public class StatusEffectController : MonoBehaviour
         return true;
     }
 
+
+    // =========================================================
+    // 타입 전체 제거
+    // =========================================================
+
     public int RemoveStatusEffect(
         StatusEffectType type)
     {
@@ -807,19 +1270,34 @@ public class StatusEffectController : MonoBehaviour
         return removedCount;
     }
 
+
+    // =========================================================
+    // 전체 제거
+    // =========================================================
+
     public void ClearAllStatusEffects()
     {
-        if (activeEffects.Count == 0)
+        if (
+            activeEffects == null ||
+            activeEffects.Count == 0)
+        {
             return;
+        }
 
         activeEffects.Clear();
 
         Debug.Log(
-            "[StatusEffectController] 모든 상태이상을 제거했습니다."
+            "[StatusEffectController] " +
+            "모든 상태이상을 제거했습니다."
         );
 
         NotifyChanged();
     }
+
+
+    // =========================================================
+    // 지속시간 종료 제거
+    // =========================================================
 
     private void RemoveExpiredEffects()
     {
@@ -838,12 +1316,18 @@ public class StatusEffectController : MonoBehaviour
         if (removedCount > 0)
         {
             Debug.Log(
-                "[StatusEffectController] 지속시간이 끝난 상태이상 " +
+                "[StatusEffectController] " +
+                "지속시간이 끝난 상태이상 " +
                 removedCount +
                 "개 제거"
             );
         }
     }
+
+
+    // =========================================================
+    // 배고픔 / 정신력 조건 제거
+    // =========================================================
 
     private void RemoveBySpecialConditions()
     {
@@ -851,43 +1335,54 @@ public class StatusEffectController : MonoBehaviour
             GetComponent<BattleUnit>();
 
         bool isPlayer =
-            BattleManager.Instance != null &&
-            BattleManager.Instance.playerUnit != null &&
-            unit ==
-            BattleManager.Instance.playerUnit;
+            IsPlayerController(
+                unit
+            );
 
-        if (!isPlayer ||
-            PlayerResourceManager.Instance == null)
+        if (
+            !isPlayer ||
+            PlayerResourceManager.Instance ==
+            null)
         {
             return;
         }
 
-        float hungerRatio =
-            0f;
 
-        float mentalRatio =
-            0f;
+        float hungerRatio = 0f;
+        float mentalRatio = 0f;
 
-        if (PlayerResourceManager.Instance.MaxHunger > 0)
+
+        if (
+            PlayerResourceManager.Instance
+                .MaxHunger > 0)
         {
             hungerRatio =
                 (float)
-                PlayerResourceManager.Instance.CurrentHunger /
-                PlayerResourceManager.Instance.MaxHunger;
+                PlayerResourceManager.Instance
+                    .CurrentHunger /
+                PlayerResourceManager.Instance
+                    .MaxHunger;
         }
 
-        if (PlayerResourceManager.Instance.MaxMental > 0)
+
+        if (
+            PlayerResourceManager.Instance
+                .MaxMental > 0)
         {
             mentalRatio =
                 (float)
-                PlayerResourceManager.Instance.CurrentMental /
-                PlayerResourceManager.Instance.MaxMental;
+                PlayerResourceManager.Instance
+                    .CurrentMental /
+                PlayerResourceManager.Instance
+                    .MaxMental;
         }
+
 
         activeEffects.RemoveAll(
             effect =>
             {
-                if (effect == null ||
+                if (
+                    effect == null ||
                     effect.Data == null)
                 {
                     return true;
@@ -898,27 +1393,44 @@ public class StatusEffectController : MonoBehaviour
                 {
                     case StatusEffectRemoveType.HungerAbove70:
 
-                        return hungerRatio > 0.70f;
+                        return
+                            hungerRatio >
+                            0.70f;
+
 
                     case StatusEffectRemoveType.HungerAbove50:
 
-                        return hungerRatio > 0.50f;
+                        return
+                            hungerRatio >
+                            0.50f;
+
 
                     case StatusEffectRemoveType.HungerAbove25:
 
-                        return hungerRatio > 0.25f;
+                        return
+                            hungerRatio >
+                            0.25f;
+
 
                     case StatusEffectRemoveType.MentalAbove75:
 
-                        return mentalRatio > 0.75f;
+                        return
+                            mentalRatio >
+                            0.75f;
+
 
                     case StatusEffectRemoveType.MentalAbove50:
 
-                        return mentalRatio > 0.50f;
+                        return
+                            mentalRatio >
+                            0.50f;
+
 
                     case StatusEffectRemoveType.MentalAbove25:
 
-                        return mentalRatio > 0.25f;
+                        return
+                            mentalRatio >
+                            0.25f;
                 }
 
                 return false;
@@ -926,8 +1438,41 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
     // =========================================================
-    // 내부 검색 / 검증
+    // 동일 ID 개수
+    // =========================================================
+
+    private int GetSameEffectCount(
+        int id)
+    {
+        int count = 0;
+
+        foreach (
+            ActiveStatusEffect effect
+            in activeEffects)
+        {
+            if (
+                effect == null ||
+                effect.Data == null)
+            {
+                continue;
+            }
+
+            if (
+                effect.Data.id ==
+                id)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+
+    // =========================================================
+    // 같은 효과 검색
     // =========================================================
 
     private ActiveStatusEffect FindSameEffect(
@@ -940,18 +1485,21 @@ public class StatusEffectController : MonoBehaviour
             ActiveStatusEffect effect
             in activeEffects)
         {
-            if (effect == null ||
+            if (
+                effect == null ||
                 effect.Data == null)
             {
                 continue;
             }
 
             /*
-             * 문서상 같은 이름의 상태이상이라도
-             * ID가 다르면 별개의 데이터가 될 수 있으므로
-             * ID 기준으로 판단한다.
+             * ID 기준.
+             *
+             * 같은 이름이라도 ID가 다르면
+             * 서로 다른 상태이상으로 취급.
              */
-            if (effect.Data.id ==
+            if (
+                effect.Data.id ==
                 data.id)
             {
                 return effect;
@@ -961,6 +1509,11 @@ public class StatusEffectController : MonoBehaviour
         return null;
     }
 
+
+    // =========================================================
+    // 유효성 검사
+    // =========================================================
+
     private bool IsValidEffect(
         ActiveStatusEffect effect)
     {
@@ -969,6 +1522,7 @@ public class StatusEffectController : MonoBehaviour
             effect.Data != null &&
             !effect.IsExpired;
     }
+
 
     private void RemoveInvalidEffects()
     {
@@ -987,16 +1541,22 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
+
+    // =========================================================
+    // UI 갱신 알림
+    // =========================================================
+
     private void NotifyChanged()
     {
         OnStatusEffectsChanged?.Invoke();
     }
 
+
     // =========================================================
-    // DEBUG TEST
+    // DEBUG
     // =========================================================
 
-    [ContextMenu("DEBUG - 중독 3턴 / 10 피해 부여")]
+    [ContextMenu("DEBUG - 중독 3턴 / 최대 체력 10%")]
     private void DebugAddPoison()
     {
         StatusEffectData poison =
@@ -1008,7 +1568,7 @@ public class StatusEffectController : MonoBehaviour
                     "중독",
 
                 description =
-                    "턴 종료마다 10의 피해를 받습니다.",
+                    "턴 종료마다 최대 체력의 10% 피해를 받습니다.",
 
                 tendency =
                     StatusEffectTendency.Negative,
@@ -1028,8 +1588,12 @@ public class StatusEffectController : MonoBehaviour
                 whenBuffEffect =
                     StatusEffectTiming.TurnEnd,
 
+                /*
+                 * 실제 함정 중독과 동일하게
+                 * 중첩 불가.
+                 */
                 canStack =
-                    true,
+                    false,
 
                 whenRemove =
                     StatusEffectRemoveType.DurationEnded
@@ -1040,7 +1604,8 @@ public class StatusEffectController : MonoBehaviour
         );
     }
 
-    [ContextMenu("DEBUG - 공격력 +25% / 3턴 부여")]
+
+    [ContextMenu("DEBUG - 공격력 +25% / 3턴")]
     private void DebugAddAttackPowerUp()
     {
         StatusEffectData buff =
@@ -1084,12 +1649,13 @@ public class StatusEffectController : MonoBehaviour
         );
 
         Debug.Log(
-            "[StatusEffectController] 현재 공격력 배율: " +
+            "[DEBUG] 현재 공격력 배율: " +
             GetAttackPowerMultiplier()
         );
     }
 
-    [ContextMenu("DEBUG - 명중률 -15 / 2턴 부여")]
+
+    [ContextMenu("DEBUG - 명중률 -15 / 2턴")]
     private void DebugAddAccuracyDown()
     {
         StatusEffectData debuff =
@@ -1133,8 +1699,177 @@ public class StatusEffectController : MonoBehaviour
         );
 
         Debug.Log(
-            "[StatusEffectController] 현재 명중 보정: " +
+            "[DEBUG] 현재 명중 보정: " +
             GetAccuracyBonus()
+        );
+    }
+
+
+    // =========================================================
+    // 함정 DEBUG 공통
+    // =========================================================
+
+    private void DebugApplyTrapStatus(
+        int trapType,
+        int duration)
+    {
+        StatusEffectData data =
+            TrapStatusEffectFactory.Create(
+                trapType,
+                duration
+            );
+
+        if (data == null)
+        {
+            Debug.LogError(
+                "[DEBUG] 함정 상태이상 생성 실패" +
+                " / TrapType: " +
+                trapType
+            );
+
+            return;
+        }
+
+        AddStatusEffect(
+            data
+        );
+
+        Debug.Log(
+            "[DEBUG] 함정 상태이상 적용 완료" +
+            " / TrapType: " +
+            trapType +
+            " / 이름: " +
+            data.buffName +
+            " / 지속시간: " +
+            duration
+        );
+    }
+
+
+    // =========================================================
+    // Trap 1 ~ 8
+    // =========================================================
+
+    [ContextMenu("DEBUG TRAP/01 - 부상")]
+    private void DebugTrap01_Injury()
+    {
+        DebugApplyTrapStatus(
+            1,
+            3
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/02 - 피로")]
+    private void DebugTrap02_Fatigue()
+    {
+        DebugApplyTrapStatus(
+            2,
+            4
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/03 - 좌절")]
+    private void DebugTrap03_Frustration()
+    {
+        DebugApplyTrapStatus(
+            3,
+            5
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/04 - 중독")]
+    private void DebugTrap04_Poison()
+    {
+        DebugApplyTrapStatus(
+            4,
+            3
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/05 - 취약")]
+    private void DebugTrap05_Vulnerable()
+    {
+        DebugApplyTrapStatus(
+            5,
+            4
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/06 - 침묵")]
+    private void DebugTrap06_Silence()
+    {
+        DebugApplyTrapStatus(
+            6,
+            5
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/07 - 혼란")]
+    private void DebugTrap07_Confusion()
+    {
+        DebugApplyTrapStatus(
+            7,
+            3
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/08 - 부식")]
+    private void DebugTrap08_Corrosion()
+    {
+        DebugApplyTrapStatus(
+            8,
+            3
+        );
+    }
+
+
+    // =========================================================
+    // Trap 20 ~ 23
+    // =========================================================
+
+    [ContextMenu("DEBUG TRAP/20 - STR 감소")]
+    private void DebugTrap20_StrengthDown()
+    {
+        DebugApplyTrapStatus(
+            20,
+            3
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/21 - DEX 감소")]
+    private void DebugTrap21_DexterityDown()
+    {
+        DebugApplyTrapStatus(
+            21,
+            5
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/22 - INT 감소")]
+    private void DebugTrap22_IntelligenceDown()
+    {
+        DebugApplyTrapStatus(
+            22,
+            3
+        );
+    }
+
+
+    [ContextMenu("DEBUG TRAP/23 - CON 감소")]
+    private void DebugTrap23_ConstitutionDown()
+    {
+        DebugApplyTrapStatus(
+            23,
+            3
         );
     }
 }

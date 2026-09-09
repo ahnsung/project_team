@@ -1179,6 +1179,10 @@ public class DungeonManager : MonoBehaviour
     // Turn
     // =========================================================
 
+    // =========================================================
+    // Turn
+    // =========================================================
+
     public void AddTurn(
         string reason = "")
     {
@@ -1207,8 +1211,137 @@ public class DungeonManager : MonoBehaviour
         );
 
 
+        // =====================================================
+        // 플레이어 상태이상 턴 종료 처리
+        // =====================================================
+
+        ProcessPlayerStatusEffectsOnTurnEnd();
+
+
+        // =====================================================
+        // 기존 턴 변경 이벤트
+        // =====================================================
+
         OnTurnChanged?.Invoke(
             currentTurn
+        );
+    }
+
+
+    // =========================================================
+    // Player Status Effect Turn End
+    // =========================================================
+
+    private void ProcessPlayerStatusEffectsOnTurnEnd()
+    {
+        StatusEffectController controller =
+            null;
+
+
+        // -----------------------------------------------------
+        // 1순위: BattleManager에 연결된 Player
+        // -----------------------------------------------------
+
+        if (
+            BattleManager.Instance != null &&
+            BattleManager.Instance.playerUnit != null
+        )
+        {
+            controller =
+                BattleManager.Instance
+                    .playerUnit
+                    .GetComponent<
+                        StatusEffectController
+                    >();
+
+
+            if (controller == null)
+            {
+                controller =
+                    BattleManager.Instance
+                        .playerUnit
+                        .GetComponentInParent<
+                            StatusEffectController
+                        >();
+            }
+
+
+            if (controller == null)
+            {
+                controller =
+                    BattleManager.Instance
+                        .playerUnit
+                        .GetComponentInChildren<
+                            StatusEffectController
+                        >();
+            }
+        }
+
+
+        // -----------------------------------------------------
+        // 2순위: Scene 내 플레이어 StatusEffectController
+        // -----------------------------------------------------
+
+        if (controller == null)
+        {
+            StatusEffectController[] controllers =
+                FindObjectsByType<
+                    StatusEffectController
+                >(
+                    FindObjectsSortMode.None
+                );
+
+
+            foreach (
+                StatusEffectController candidate
+                in controllers
+            )
+            {
+                if (candidate == null)
+                    continue;
+
+
+                BattleUnit unit =
+                    candidate.GetComponent<
+                        BattleUnit
+                    >();
+
+
+                if (
+                    BattleManager.Instance != null &&
+                    BattleManager.Instance.playerUnit != null &&
+                    unit ==
+                    BattleManager.Instance.playerUnit
+                )
+                {
+                    controller =
+                        candidate;
+
+                    break;
+                }
+            }
+        }
+
+
+        if (controller == null)
+        {
+            Debug.LogWarning(
+                "[DungeonManager] " +
+                "플레이어 StatusEffectController를 찾지 못했습니다."
+            );
+
+            return;
+        }
+
+
+        controller.ProcessTiming(
+            StatusEffectTiming.TurnEnd
+        );
+
+
+        Debug.Log(
+            "[DungeonManager] " +
+            "플레이어 상태이상 TurnEnd 처리 완료"
         );
     }
 
@@ -1221,7 +1354,6 @@ public class DungeonManager : MonoBehaviour
     {
         ResolveReferences();
 
-
         if (uiManager != null)
         {
             uiManager
@@ -1229,7 +1361,6 @@ public class DungeonManager : MonoBehaviour
                     GetDirections()
                 );
         }
-
 
         if (minimapUI != null)
         {

@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 public class RoomDirectionVisualController : MonoBehaviour
@@ -7,20 +6,44 @@ public class RoomDirectionVisualController : MonoBehaviour
     // Direction Visual Set
     // =========================================================
 
-    [Serializable]
+    [System.Serializable]
     public class DirectionVisualSet
     {
         [Header("Normal / Open")]
-        public GameObject normalVisual;
+        [SerializeField]
+        private GameObject normalVisual;
 
         [Header("Door")]
-        public GameObject doorVisual;
+        [SerializeField]
+        private GameObject doorVisual;
 
         [Header("One Way")]
-        public GameObject oneWayVisual;
+        [SerializeField]
+        private GameObject oneWayVisual;
 
         [Header("Locked Door")]
-        public GameObject lockedDoorVisual;
+        [SerializeField]
+        private GameObject lockedDoorVisual;
+
+        [Header("Gimmick Door")]
+        [SerializeField]
+        private GameObject gimmickDoorVisual;
+
+
+        public GameObject NormalVisual
+            => normalVisual;
+
+        public GameObject DoorVisual
+            => doorVisual;
+
+        public GameObject OneWayVisual
+            => oneWayVisual;
+
+        public GameObject LockedDoorVisual
+            => lockedDoorVisual;
+
+        public GameObject GimmickDoorVisual
+            => gimmickDoorVisual;
     }
 
 
@@ -38,41 +61,24 @@ public class RoomDirectionVisualController : MonoBehaviour
 
 
     // =========================================================
-    // Direction Visuals
+    // Directions
     // =========================================================
 
     [Header("Up")]
     [SerializeField]
     private DirectionVisualSet up;
 
-
     [Header("Down")]
     [SerializeField]
     private DirectionVisualSet down;
-
 
     [Header("Left")]
     [SerializeField]
     private DirectionVisualSet left;
 
-
     [Header("Right")]
     [SerializeField]
     private DirectionVisualSet right;
-
-
-    // =========================================================
-    // Visual Scale
-    // =========================================================
-
-    [Header("Visual Scale")]
-
-    [Tooltip(
-        "방향 이미지 전체 크기 배율. " +
-        "현재 리소스가 작으면 3~5 정도로 테스트하세요."
-    )]
-    [SerializeField]
-    private float visualScale = 4f;
 
 
     // =========================================================
@@ -102,8 +108,6 @@ public class RoomDirectionVisualController : MonoBehaviour
     {
         ResolveReferences();
 
-        ApplyScale();
-
         RefreshVisuals();
     }
 
@@ -114,20 +118,31 @@ public class RoomDirectionVisualController : MonoBehaviour
 
 
         if (dungeonManager == null)
-        {
             return;
-        }
 
 
         Vector2Int currentRoom =
             dungeonManager.CurrentRoom;
 
 
+        /*
+         * 방이 바뀌었을 때만 다시 갱신.
+         *
+         * Transform의
+         * Position / Rotation / Scale은
+         * 절대 수정하지 않는다.
+         */
         if (
             !initialized ||
             currentRoom != lastRoom
         )
         {
+            lastRoom =
+                currentRoom;
+
+            initialized =
+                true;
+
             RefreshVisuals();
         }
     }
@@ -155,61 +170,7 @@ public class RoomDirectionVisualController : MonoBehaviour
 
 
     // =========================================================
-    // Scale
-    // =========================================================
-
-    private void ApplyScale()
-    {
-        ApplyScaleToSet(up);
-        ApplyScaleToSet(down);
-        ApplyScaleToSet(left);
-        ApplyScaleToSet(right);
-    }
-
-
-    private void ApplyScaleToSet(
-        DirectionVisualSet set)
-    {
-        if (set == null)
-        {
-            return;
-        }
-
-
-        ApplyScaleToObject(
-            set.normalVisual
-        );
-
-        ApplyScaleToObject(
-            set.doorVisual
-        );
-
-        ApplyScaleToObject(
-            set.oneWayVisual
-        );
-
-        ApplyScaleToObject(
-            set.lockedDoorVisual
-        );
-    }
-
-
-    private void ApplyScaleToObject(
-        GameObject target)
-    {
-        if (target == null)
-        {
-            return;
-        }
-
-
-        target.transform.localScale =
-            Vector3.one * visualScale;
-    }
-
-
-    // =========================================================
-    // Refresh
+    // Refresh All
     // =========================================================
 
     public void RefreshVisuals()
@@ -217,119 +178,95 @@ public class RoomDirectionVisualController : MonoBehaviour
         ResolveReferences();
 
 
-        if (
-            dungeonManager == null ||
-            moveDataLoader == null
-        )
+        if (dungeonManager == null)
         {
+            Debug.LogWarning(
+                "[RoomDirectionVisual] " +
+                "DungeonManager가 없습니다."
+            );
+
+            HideAll();
+
             return;
         }
 
 
-        Vector2Int currentRoom =
-            dungeonManager.CurrentRoom;
-
-
         RefreshDirection(
-            currentRoom,
             MoveDirection.Up,
             up
         );
 
 
         RefreshDirection(
-            currentRoom,
             MoveDirection.Down,
             down
         );
 
 
         RefreshDirection(
-            currentRoom,
             MoveDirection.Left,
             left
         );
 
 
         RefreshDirection(
-            currentRoom,
             MoveDirection.Right,
             right
         );
 
 
         lastRoom =
-            currentRoom;
-
+            dungeonManager.CurrentRoom;
 
         initialized =
             true;
 
 
-        if (printLog)
-        {
-            Debug.Log(
-                "[RoomDirectionVisual] 갱신 완료\n" +
-                $"현재 위치: {currentRoom}"
-            );
-        }
+        Print(
+            "갱신 완료 / 현재 위치: " +
+            dungeonManager.CurrentRoom
+        );
     }
 
 
     // =========================================================
-    // Direction Logic
+    // Direction
     // =========================================================
 
     private void RefreshDirection(
-        Vector2Int room,
         MoveDirection direction,
         DirectionVisualSet visualSet)
     {
         if (visualSet == null)
-        {
             return;
-        }
 
 
-        DisableAll(
+        /*
+         * 이전 방에서 켜져 있던
+         * 방향 이미지만 전부 끈다.
+         *
+         * Transform은 건드리지 않는다.
+         */
+        HideDirection(
             visualSet
         );
 
 
-        MoveData moveData =
-            moveDataLoader.GetMoveData(
-                room,
+        // =====================================================
+        // MoveData
+        // =====================================================
+
+        MoveData data =
+            dungeonManager.GetMoveData(
                 direction
             );
 
 
-        // =====================================================
-        // No Data
-        // =====================================================
-
-        if (moveData == null)
+        if (data == null)
         {
-            PrintResult(
-                direction,
-                "데이터 없음 → OFF"
-            );
-
-            return;
-        }
-
-
-        // =====================================================
-        // Wall
-        // =====================================================
-
-        if (
-            moveData.PathType ==
-            MovePathType.Wall
-        )
-        {
-            PrintResult(
-                direction,
-                "Wall → OFF"
+            Print(
+                direction +
+                " / MoveData 없음 -> OFF"
             );
 
             return;
@@ -341,29 +278,43 @@ public class RoomDirectionVisualController : MonoBehaviour
         // =====================================================
 
         if (
-            moveData.PathType ==
+            data.PathType ==
             MovePathType.Open
         )
         {
-            if (moveData.Passable)
-            {
-                Activate(
-                    visualSet.normalVisual
+            bool canMove =
+                dungeonManager.CanMove(
+                    direction
                 );
 
-                PrintResult(
-                    direction,
-                    "Open / Passable → Normal ON"
-                );
-            }
-            else
+
+            if (!canMove)
             {
-                PrintResult(
-                    direction,
-                    "Open / Not Passable → OFF"
+                Print(
+                    direction +
+                    " / Open / 이동 불가 -> OFF"
                 );
+
+                return;
             }
 
+
+            /*
+             * 일반 이동 가능.
+             *
+             * Normal Visual에 연결된
+             * 이미지 오브젝트 표시.
+             */
+            SetVisual(
+                visualSet.NormalVisual,
+                true
+            );
+
+
+            Print(
+                direction +
+                " / Open / Passable -> Normal ON"
+            );
 
             return;
         }
@@ -374,39 +325,54 @@ public class RoomDirectionVisualController : MonoBehaviour
         // =====================================================
 
         if (
-            moveData.PathType ==
+            data.PathType ==
             MovePathType.Door
         )
         {
-            if (moveData.Passable)
+            bool canMove =
+                dungeonManager.CanMove(
+                    direction
+                );
+
+
+            if (!canMove)
             {
-                if (visualSet.doorVisual != null)
-                {
-                    Activate(
-                        visualSet.doorVisual
-                    );
-                }
-                else
-                {
-                    Activate(
-                        visualSet.normalVisual
-                    );
-                }
+                Print(
+                    direction +
+                    " / Door / 이동 불가 -> OFF"
+                );
+
+                return;
+            }
 
 
-                PrintResult(
-                    direction,
-                    "Door → ON"
+            if (
+                visualSet.DoorVisual !=
+                null
+            )
+            {
+                SetVisual(
+                    visualSet.DoorVisual,
+                    true
                 );
             }
             else
             {
-                PrintResult(
-                    direction,
-                    "Door / Not Passable → OFF"
+                /*
+                 * Door 전용 이미지가 없으면
+                 * Normal 이미지 사용.
+                 */
+                SetVisual(
+                    visualSet.NormalVisual,
+                    true
                 );
             }
 
+
+            Print(
+                direction +
+                " / Door -> Door ON"
+            );
 
             return;
         }
@@ -417,39 +383,63 @@ public class RoomDirectionVisualController : MonoBehaviour
         // =====================================================
 
         if (
-            moveData.PathType ==
+            data.PathType ==
             MovePathType.OneWay
         )
         {
-            if (moveData.Passable)
+            bool canMove =
+                dungeonManager.CanMove(
+                    direction
+                );
+
+
+            /*
+             * OneWay
+             *
+             * 현재 방향에서 실제 통과 가능:
+             *      OneWay 이미지 ON
+             *
+             * 역방향이라 통과 불가능:
+             *      아무것도 표시하지 않음
+             */
+            if (!canMove)
             {
-                if (visualSet.oneWayVisual != null)
-                {
-                    Activate(
-                        visualSet.oneWayVisual
-                    );
-                }
-                else
-                {
-                    Activate(
-                        visualSet.normalVisual
-                    );
-                }
+                Print(
+                    direction +
+                    " / OneWay / 역방향 -> OFF"
+                );
+
+                return;
+            }
 
 
-                PrintResult(
-                    direction,
-                    "OneWay / Passable → ON"
+            if (
+                visualSet.OneWayVisual !=
+                null
+            )
+            {
+                SetVisual(
+                    visualSet.OneWayVisual,
+                    true
                 );
             }
             else
             {
-                PrintResult(
-                    direction,
-                    "OneWay / 역방향 → OFF"
+                /*
+                 * 아직 해당 방향 OneWay 이미지가 없으면
+                 * Normal 이미지로 임시 표시.
+                 */
+                SetVisual(
+                    visualSet.NormalVisual,
+                    true
                 );
             }
 
+
+            Print(
+                direction +
+                " / OneWay / 정방향 -> OneWay ON"
+            );
 
             return;
         }
@@ -460,66 +450,53 @@ public class RoomDirectionVisualController : MonoBehaviour
         // =====================================================
 
         if (
-            moveData.PathType ==
+            data.PathType ==
             MovePathType.LockedDoor
         )
         {
-            bool opened =
-                LockedDoorManager.Instance != null &&
-                LockedDoorManager.Instance.IsOpened(
-                    room,
-                    direction
-                );
+            /*
+             * LockedDoor는 현재 잠겨서
+             * 통과 불가능하더라도 문 자체는 보여준다.
+             */
 
 
-            if (opened)
+            if (
+                visualSet.LockedDoorVisual !=
+                null
+            )
             {
-                if (visualSet.doorVisual != null)
-                {
-                    Activate(
-                        visualSet.doorVisual
-                    );
-                }
-                else
-                {
-                    Activate(
-                        visualSet.normalVisual
-                    );
-                }
-
-
-                PrintResult(
-                    direction,
-                    "LockedDoor / Opened → ON"
+                SetVisual(
+                    visualSet.LockedDoorVisual,
+                    true
+                );
+            }
+            else if (
+                visualSet.DoorVisual !=
+                null
+            )
+            {
+                /*
+                 * LockedDoor 전용 이미지가 아직 없으면
+                 * Door 이미지 사용.
+                 */
+                SetVisual(
+                    visualSet.DoorVisual,
+                    true
                 );
             }
             else
             {
-                /*
-                 * 잠긴 문도 실제로 '길이 존재한다'는 것을
-                 * 보여주려면 LockedDoor 이미지를 표시한다.
-                 */
-
-                if (visualSet.lockedDoorVisual != null)
-                {
-                    Activate(
-                        visualSet.lockedDoorVisual
-                    );
-
-                    PrintResult(
-                        direction,
-                        "LockedDoor / Locked → Locked ON"
-                    );
-                }
-                else
-                {
-                    PrintResult(
-                        direction,
-                        "LockedDoor / Locked / 이미지 없음 → OFF"
-                    );
-                }
+                SetVisual(
+                    visualSet.NormalVisual,
+                    true
+                );
             }
 
+
+            Print(
+                direction +
+                " / LockedDoor -> ON"
+            );
 
             return;
         }
@@ -530,93 +507,171 @@ public class RoomDirectionVisualController : MonoBehaviour
         // =====================================================
 
         if (
-            moveData.PathType ==
+            data.PathType ==
             MovePathType.GimmickDoor
         )
         {
-            /*
-             * 아직 실제 Gimmick 구현 전.
-             *
-             * 길 존재 여부는 보여주되
-             * LockedDoor 이미지가 있으면 임시 사용.
-             */
-
-            if (visualSet.lockedDoorVisual != null)
+            if (
+                visualSet.GimmickDoorVisual !=
+                null
+            )
             {
-                Activate(
-                    visualSet.lockedDoorVisual
+                SetVisual(
+                    visualSet.GimmickDoorVisual,
+                    true
+                );
+            }
+            else if (
+                visualSet.DoorVisual !=
+                null
+            )
+            {
+                SetVisual(
+                    visualSet.DoorVisual,
+                    true
+                );
+            }
+            else
+            {
+                SetVisual(
+                    visualSet.NormalVisual,
+                    true
                 );
             }
 
 
-            PrintResult(
-                direction,
-                "GimmickDoor → 임시 표시"
+            Print(
+                direction +
+                " / GimmickDoor -> ON"
             );
 
-
-            return;
-        }
-    }
-
-
-    // =========================================================
-    // Object Control
-    // =========================================================
-
-    private void DisableAll(
-        DirectionVisualSet set)
-    {
-        SetActive(
-            set.normalVisual,
-            false
-        );
-
-        SetActive(
-            set.doorVisual,
-            false
-        );
-
-        SetActive(
-            set.oneWayVisual,
-            false
-        );
-
-        SetActive(
-            set.lockedDoorVisual,
-            false
-        );
-    }
-
-
-    private void Activate(
-        GameObject target)
-    {
-        if (target == null)
-        {
             return;
         }
 
 
-        target.SetActive(
-            true
+        // =====================================================
+        // Wall / Unknown
+        // =====================================================
+
+        Print(
+            direction +
+            " / " +
+            data.PathType +
+            " -> OFF"
         );
     }
 
 
-    private void SetActive(
+    // =========================================================
+    // Hide Direction
+    // =========================================================
+
+    private void HideDirection(
+        DirectionVisualSet visualSet)
+    {
+        if (visualSet == null)
+            return;
+
+
+        SetVisual(
+            visualSet.NormalVisual,
+            false
+        );
+
+
+        SetVisual(
+            visualSet.DoorVisual,
+            false
+        );
+
+
+        SetVisual(
+            visualSet.OneWayVisual,
+            false
+        );
+
+
+        SetVisual(
+            visualSet.LockedDoorVisual,
+            false
+        );
+
+
+        SetVisual(
+            visualSet.GimmickDoorVisual,
+            false
+        );
+    }
+
+
+    // =========================================================
+    // Hide All
+    // =========================================================
+
+    private void HideAll()
+    {
+        HideDirection(
+            up
+        );
+
+
+        HideDirection(
+            down
+        );
+
+
+        HideDirection(
+            left
+        );
+
+
+        HideDirection(
+            right
+        );
+    }
+
+
+    // =========================================================
+    // Set Active
+    // =========================================================
+
+    private void SetVisual(
         GameObject target,
         bool active)
     {
         if (target == null)
-        {
             return;
-        }
 
 
-        target.SetActive(
+        /*
+         * =====================================================
+         * 매우 중요
+         * =====================================================
+         *
+         * 이 스크립트에서는
+         * 오직 SetActive만 사용한다.
+         *
+         * 아래 값들은 절대 변경하지 않는다.
+         *
+         * transform.position
+         * transform.localPosition
+         * transform.rotation
+         * transform.localRotation
+         * transform.localScale
+         *
+         * 따라서 Unity에서 직접 설정한
+         * 위치 / 회전 / 크기가 그대로 유지된다.
+         */
+
+        if (
+            target.activeSelf !=
             active
-        );
+        )
+        {
+            target.SetActive(
+                active
+            );
+        }
     }
 
 
@@ -624,40 +679,16 @@ public class RoomDirectionVisualController : MonoBehaviour
     // Debug
     // =========================================================
 
-    private void PrintResult(
-        MoveDirection direction,
+    private void Print(
         string message)
     {
         if (!printLog)
-        {
             return;
-        }
 
 
         Debug.Log(
             "[RoomDirectionVisual] " +
-            $"{direction} / {message}"
+            message
         );
-    }
-
-
-    [ContextMenu(
-        "DEBUG - Visual 강제 갱신"
-    )]
-    private void DebugRefresh()
-    {
-        initialized =
-            false;
-
-        RefreshVisuals();
-    }
-
-
-    [ContextMenu(
-        "DEBUG - Scale 다시 적용"
-    )]
-    private void DebugApplyScale()
-    {
-        ApplyScale();
     }
 }
